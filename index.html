@@ -1,0 +1,1980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GTO Advisor — Tournament Poker</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♠</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0d12;
+  --surface: #12161e;
+  --surface2: #1a1f2b;
+  --surface3: #222836;
+  --border: #2a3040;
+  --border-hl: #3a4560;
+  --text: #e8ecf4;
+  --text2: #8a94a8;
+  --text3: #5a6478;
+  --green: #22c55e;
+  --green-bg: #22c55e18;
+  --red: #ef4444;
+  --red-bg: #ef444418;
+  --yellow: #eab308;
+  --yellow-bg: #eab30818;
+  --blue: #3b82f6;
+  --blue-bg: #3b82f618;
+  --purple: #a855f7;
+  --spade: #e8ecf4;
+  --heart: #ef4444;
+  --diamond: #3b82f6;
+  --club: #22c55e;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--sans); min-height: 100vh; overflow-x: hidden;
+}
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background: radial-gradient(ellipse at 20% 0%, #22c55e08 0%, transparent 50%),
+              radial-gradient(ellipse at 80% 100%, #3b82f608 0%, transparent 50%);
+  pointer-events: none; z-index: 0;
+}
+.app { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 24px 20px; }
+
+.header { display: flex; align-items: center; gap: 14px; padding-bottom: 24px; border-bottom: 1px solid var(--border); margin-bottom: 28px; }
+.header-icon { width: 44px; height: 44px; background: linear-gradient(135deg, #22c55e, #059669); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 0 24px #22c55e30; }
+.header h1 { font-family: var(--mono); font-weight: 600; font-size: 20px; letter-spacing: -0.5px; }
+.header p { font-size: 13px; color: var(--text2); margin-top: 2px; }
+.header-badge { margin-left: auto; font-family: var(--mono); font-size: 11px; padding: 4px 10px; border-radius: 6px; background: var(--surface2); color: var(--text3); border: 1px solid var(--border); }
+
+.tabs { display: flex; gap: 4px; background: var(--surface); border-radius: 12px; padding: 4px; margin-bottom: 24px; border: 1px solid var(--border); }
+.tab { flex: 1; padding: 10px 16px; border-radius: 8px; font-family: var(--mono); font-weight: 500; font-size: 13px; text-align: center; cursor: pointer; color: var(--text2); transition: all 0.2s; border: none; background: none; }
+.tab:hover { color: var(--text); background: var(--surface2); }
+.tab.active { background: var(--surface3); color: var(--green); box-shadow: 0 1px 4px #0008; }
+
+.panel { display: none; }
+.panel.active { display: block; }
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group.full { grid-column: 1 / -1; }
+.form-label { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+
+input, select { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: var(--text); font-family: var(--mono); font-size: 14px; transition: border-color 0.2s; outline: none; }
+input:focus, select:focus { border-color: var(--green); }
+select { cursor: pointer; }
+select option { background: var(--surface2); }
+
+.card-selector { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+.card-selector-title { font-family: var(--mono); font-size: 12px; color: var(--text3); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.card-display { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; min-height: 80px; }
+.card-slot { width: 56px; height: 78px; background: var(--surface2); border: 2px dashed var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 12px; color: var(--text3); transition: all 0.2s; position: relative; cursor: pointer; }
+.card-slot.filled { border: 2px solid var(--border-hl); background: var(--surface3); font-size: 20px; font-weight: 700; }
+.card-slot.filled.heart, .card-slot.filled.diamond { color: var(--red); }
+.card-slot.filled.spade, .card-slot.filled.club { color: var(--text); }
+.card-slot .remove { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; background: var(--red); color: white; border-radius: 50%; font-size: 11px; display: none; align-items: center; justify-content: center; cursor: pointer; border: 2px solid var(--bg); }
+.card-slot.filled:hover .remove { display: flex; }
+
+.picker-section { margin-bottom: 8px; }
+.picker-row { display: flex; gap: 4px; flex-wrap: wrap; }
+.rank-btn, .suit-btn { width: 38px; height: 34px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; font-family: var(--mono); font-weight: 600; font-size: 13px; color: var(--text2); cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+.rank-btn:hover, .suit-btn:hover { background: var(--surface3); color: var(--text); border-color: var(--border-hl); }
+.rank-btn.selected { background: var(--green); color: #000; border-color: var(--green); }
+.suit-btn.selected-s { background: var(--spade); color: #000; }
+.suit-btn.selected-h { background: var(--heart); color: #fff; }
+.suit-btn.selected-d { background: var(--diamond); color: #fff; }
+.suit-btn.selected-c { background: var(--club); color: #000; }
+.suit-btn.hearts { color: var(--heart); }
+.suit-btn.diamonds { color: var(--diamond); }
+.suit-btn.clubs { color: var(--club); }
+.suit-btn.spades { color: var(--spade); }
+.rank-btn.used, .suit-btn.used { opacity: 0.25; pointer-events: none; }
+
+.action-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #22c55e, #16a34a); border: none; border-radius: 10px; font-family: var(--mono); font-weight: 600; font-size: 14px; color: #000; cursor: pointer; transition: all 0.2s; letter-spacing: 0.3px; box-shadow: 0 2px 12px #22c55e40; }
+.action-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 20px #22c55e50; }
+.action-btn:active { transform: translateY(0); }
+.action-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.result { margin-top: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; display: none; }
+.result.show { display: block; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.result-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+.result-action { font-family: var(--mono); font-weight: 700; font-size: 22px; }
+.result-action.raise, .result-action.bet, .result-action.all-in, .result-action.call { color: var(--green); }
+.result-action.fold { color: var(--red); }
+.result-action.check { color: var(--yellow); }
+.result-action.threeBet { color: var(--purple); }
+.result-sizing { margin-left: auto; font-family: var(--mono); font-weight: 600; font-size: 16px; color: var(--blue); background: var(--blue-bg); padding: 4px 12px; border-radius: 6px; }
+.result-body { padding: 20px; }
+.result-row { display: flex; gap: 12px; margin-bottom: 14px; align-items: flex-start; }
+.result-tag { font-family: var(--mono); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 3px 8px; border-radius: 4px; white-space: nowrap; min-width: 80px; text-align: center; }
+.tag-reason { background: var(--surface3); color: var(--text2); }
+.tag-conf { background: var(--green-bg); color: var(--green); }
+.tag-alt { background: var(--yellow-bg); color: var(--yellow); }
+.tag-hand { background: var(--blue-bg); color: var(--blue); }
+.tag-board { background: #a855f728; color: var(--purple); }
+.result-text { font-size: 14px; color: var(--text2); line-height: 1.5; }
+.confidence-bar { height: 4px; border-radius: 2px; background: var(--surface3); margin-top: 16px; overflow: hidden; }
+.confidence-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+.conf-high { background: var(--green); }
+.conf-med-high { background: #84cc16; }
+.conf-med { background: var(--yellow); }
+.conf-low { background: var(--red); }
+
+.board-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+.board-label { font-family: var(--mono); font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+.board-cards-display { display: flex; gap: 8px; min-height: 78px; align-items: center; flex-wrap: wrap; }
+
+.quick-ref { margin-top: 24px; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.quick-ref-title { font-family: var(--mono); font-size: 12px; color: var(--text3); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px; }
+.range-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 6px; }
+.range-item { padding: 6px 8px; border-radius: 6px; font-family: var(--mono); font-size: 12px; text-align: center; }
+.range-premium { background: #22c55e25; color: var(--green); }
+.range-strong { background: #3b82f625; color: var(--blue); }
+.range-good { background: #eab30825; color: var(--yellow); }
+.range-playable { background: #a855f725; color: var(--purple); }
+
+/* ── Multi-Table Bar ── */
+.table-bar {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 20px; padding: 6px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  overflow-x: auto;
+}
+.table-tab {
+  padding: 8px 16px; border-radius: 7px;
+  font-family: var(--mono); font-weight: 500; font-size: 12px;
+  color: var(--text3); cursor: pointer;
+  border: 1px solid transparent; background: none;
+  white-space: nowrap; transition: all 0.15s;
+  display: flex; align-items: center; gap: 8px;
+  position: relative;
+}
+.table-tab:hover { color: var(--text2); background: var(--surface2); }
+.table-tab.active { color: var(--green); background: var(--surface3); border-color: var(--border-hl); }
+.table-tab .close-tab {
+  font-size: 14px; color: var(--text3); cursor: pointer;
+  width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;
+  border-radius: 4px; transition: all 0.15s;
+}
+.table-tab .close-tab:hover { color: var(--red); background: var(--red-bg); }
+.add-table-btn {
+  width: 32px; height: 32px; border-radius: 7px;
+  font-size: 18px; font-weight: 300;
+  color: var(--text3); background: none; border: 1px dashed var(--border);
+  cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.add-table-btn:hover { color: var(--green); border-color: var(--green); background: var(--green-bg); }
+.table-status {
+  font-family: var(--mono); font-size: 10px;
+  padding: 2px 6px; border-radius: 3px; margin-left: 2px;
+}
+.status-preflop { background: var(--blue-bg); color: var(--blue); }
+.status-postflop { background: var(--purple); background: #a855f728; color: var(--purple); }
+.status-empty { background: var(--surface3); color: var(--text3); }
+
+/* ── Street Voice Buttons ── */
+.street-voice-grid {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
+  margin-bottom: 10px;
+}
+.street-voice-btn {
+  padding: 10px 12px; border-radius: 8px;
+  font-family: var(--mono); font-weight: 500; font-size: 12px;
+  color: var(--text3); cursor: pointer; transition: all 0.2s;
+  border: 1px solid var(--border); background: var(--surface);
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.street-voice-btn:hover { border-color: var(--border-hl); color: var(--text); background: var(--surface2); }
+.street-voice-btn.listening {
+  border-color: var(--red); color: var(--red); background: var(--red-bg);
+  animation: pulse-border 1.5s ease infinite;
+}
+.street-voice-btn.done {
+  border-color: var(--green); color: var(--green); background: var(--green-bg);
+}
+.street-voice-btn.active-street {
+  border-color: var(--blue); color: var(--blue); background: var(--blue-bg);
+}
+.street-voice-btn:disabled { opacity: 0.3; pointer-events: none; }
+.reset-hand-btn {
+  width: 100%; padding: 10px; border-radius: 8px;
+  font-family: var(--mono); font-weight: 500; font-size: 12px;
+  color: var(--red); cursor: pointer; transition: all 0.2s;
+  border: 1px solid var(--border); background: var(--surface);
+  margin-top: 8px;
+}
+.reset-hand-btn:hover { border-color: var(--red); background: var(--red-bg); }
+
+/* ── Voice Input ── */
+.voice-section { margin-bottom: 24px; }
+.voice-btn {
+  width: 100%; padding: 14px 20px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  font-family: var(--mono); font-weight: 500; font-size: 13px;
+  color: var(--text2); cursor: pointer; transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+.voice-btn:hover { border-color: var(--border-hl); color: var(--text); background: var(--surface2); }
+.voice-btn.listening {
+  border-color: var(--red); color: var(--red); background: var(--red-bg);
+  animation: pulse-border 1.5s ease infinite;
+}
+@keyframes pulse-border {
+  0%,100% { box-shadow: 0 0 0 0 #ef444440; }
+  50% { box-shadow: 0 0 0 8px #ef444400; }
+}
+.voice-btn .mic-icon { font-size: 18px; }
+.voice-transcript {
+  margin-top: 10px; padding: 12px 16px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  font-family: var(--mono); font-size: 12px; color: var(--text2);
+  display: none; line-height: 1.5;
+}
+.voice-transcript.show { display: block; animation: fadeIn 0.3s ease; }
+.voice-transcript .parsed { color: var(--green); }
+.voice-transcript .raw { color: var(--text3); font-style: italic; }
+.voice-hint {
+  font-family: var(--mono); font-size: 11px; color: var(--text3);
+  margin-top: 8px; padding: 0 4px; line-height: 1.6;
+}
+.voice-hint strong { color: var(--text2); }
+
+@media (max-width: 600px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .card-display { flex-wrap: wrap; }
+  .result-header { flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-icon">♠</div>
+    <div>
+      <h1>GTO Advisor</h1>
+      <p>Tournament poker decision engine</p>
+    </div>
+    <div class="header-badge">v2.0</div>
+  </div>
+
+  <!-- Multi-Table Bar -->
+  <div class="table-bar" id="table-bar">
+    <button class="table-tab active" data-table="0" onclick="switchTable(0)">
+      Table 1 <span class="table-status status-empty">—</span>
+    </button>
+    <button class="add-table-btn" onclick="addTable()" title="Add table">+</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="preflop">Preflop</button>
+    <button class="tab" data-tab="postflop">Postflop</button>
+    <button class="tab" data-tab="ranges">Ranges</button>
+  </div>
+
+  <!-- PREFLOP -->
+  <div class="panel active" id="panel-preflop">
+    <div class="voice-section">
+      <button class="voice-btn" id="voice-btn-preflop" onclick="toggleVoice('preflop')">
+        <span class="mic-icon">🎙</span> <span id="voice-label-preflop">Tap to speak your hand</span>
+      </button>
+      <div class="voice-hint">
+        <strong>Tap to start, speak, tap again to stop</strong> (or wait 3 sec and it auto-processes)<br>
+        Try: "Ace king suited on the button, 30 big blinds, facing a raise to 6"
+      </div>
+      <div class="voice-transcript" id="voice-transcript-preflop"></div>
+    </div>
+    <div class="card-selector">
+      <div class="card-selector-title">Your Hole Cards</div>
+      <div class="card-display" id="preflop-cards-display">
+        <div class="card-slot" id="preflop-slot-0" onclick="activateSlot('preflop',0)">1</div>
+        <div class="card-slot" id="preflop-slot-1" onclick="activateSlot('preflop',1)">2</div>
+      </div>
+      <div class="picker-section"><div class="picker-row" id="preflop-rank-picker"></div></div>
+      <div class="picker-section" style="margin-top:8px"><div class="picker-row" id="preflop-suit-picker"></div></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Your Position</label>
+        <select id="pre-position">
+          <option value="UTG">UTG (Under the Gun)</option>
+          <option value="MP">MP (Middle Position)</option>
+          <option value="CO">CO (Cutoff)</option>
+          <option value="BTN" selected>BTN (Button)</option>
+          <option value="SB">SB (Small Blind)</option>
+          <option value="BB">BB (Big Blind)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Stack (in BB)</label>
+        <input type="number" id="pre-stack" value="30" min="1" max="500" step="0.5">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Facing Action</label>
+        <select id="pre-facing" onchange="toggleVillainFields()">
+          <option value="unopened">Unopened (first in)</option>
+          <option value="raised">Facing a Raise</option>
+          <option value="3bet">Facing a 3-Bet</option>
+          <option value="all_in">Facing All-In</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Current Pot (BB)</label>
+        <input type="number" id="pre-pot" value="1.5" min="0" step="0.5">
+      </div>
+      <div class="form-group" id="villain-pos-group" style="display:none">
+        <label class="form-label">Villain Position</label>
+        <select id="pre-villain-pos"><option value="UTG">UTG</option><option value="MP">MP</option><option value="CO" selected>CO</option><option value="BTN">BTN</option><option value="SB">SB</option><option value="BB">BB</option></select>
+      </div>
+      <div class="form-group" id="raise-size-group" style="display:none">
+        <label class="form-label">Raise Size (BB)</label>
+        <input type="number" id="pre-raise-size" value="2.5" min="0" step="0.5">
+      </div>
+    </div>
+    <button class="action-btn" id="preflop-btn" onclick="getPreflop()" disabled>Select your cards to get advice</button>
+    <div class="result" id="preflop-result"></div>
+  </div>
+
+  <!-- POSTFLOP -->
+  <div class="panel" id="panel-postflop">
+    <div class="voice-section">
+      <div class="card-selector-title" style="margin-bottom:10px">VOICE INPUT — STREET BY STREET</div>
+      <div class="voice-hint" style="margin-top:0;margin-bottom:10px">
+        <strong>Step 1:</strong> Say your hole cards → <strong>Step 2:</strong> Say the flop → <strong>Step 3:</strong> Turn → <strong>Step 4:</strong> River<br>
+        Say cards + action: "queen spades ten diamonds five clubs, pot 12, checked to me"
+      </div>
+      <div class="street-voice-grid">
+        <button class="street-voice-btn active-street" id="voice-btn-hole" onclick="toggleStreetVoice('hole')">
+          🎙 Hole Cards
+        </button>
+        <button class="street-voice-btn" id="voice-btn-flop" onclick="toggleStreetVoice('flop')" disabled>
+          🎙 Flop
+        </button>
+        <button class="street-voice-btn" id="voice-btn-turn" onclick="toggleStreetVoice('turn')" disabled>
+          🎙 Turn
+        </button>
+      </div>
+      <div class="street-voice-grid" style="grid-template-columns: 1fr 1fr;">
+        <button class="street-voice-btn" id="voice-btn-river" onclick="toggleStreetVoice('river')" disabled>
+          🎙 River
+        </button>
+        <button class="reset-hand-btn" onclick="resetPostflopHand()" style="margin-top:0;color:var(--yellow);border-color:var(--border);">
+          ↺ New Hand
+        </button>
+      </div>
+      <div class="voice-transcript" id="voice-transcript-street"></div>
+    </div>
+    <div class="card-selector">
+      <div class="card-selector-title">Your Hole Cards</div>
+      <div class="card-display" id="postflop-hole-display">
+        <div class="card-slot" id="post-hole-slot-0" onclick="activateSlot('post-hole',0)">1</div>
+        <div class="card-slot" id="post-hole-slot-1" onclick="activateSlot('post-hole',1)">2</div>
+      </div>
+      <div class="picker-section"><div class="picker-row" id="post-hole-rank-picker"></div></div>
+      <div class="picker-section" style="margin-top:8px"><div class="picker-row" id="post-hole-suit-picker"></div></div>
+    </div>
+    <div class="board-section">
+      <div class="board-label">Community Cards (3-5)</div>
+      <div class="board-cards-display" id="board-cards-display">
+        <div class="card-slot" id="board-slot-0" onclick="activateSlot('board',0)">F1</div>
+        <div class="card-slot" id="board-slot-1" onclick="activateSlot('board',1)">F2</div>
+        <div class="card-slot" id="board-slot-2" onclick="activateSlot('board',2)">F3</div>
+        <div class="card-slot" id="board-slot-3" onclick="activateSlot('board',3)">T</div>
+        <div class="card-slot" id="board-slot-4" onclick="activateSlot('board',4)">R</div>
+      </div>
+      <div class="picker-section" style="margin-top:12px"><div class="picker-row" id="board-rank-picker"></div></div>
+      <div class="picker-section" style="margin-top:8px"><div class="picker-row" id="board-suit-picker"></div></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Your Position</label>
+        <select id="post-position"><option value="UTG">UTG</option><option value="MP">MP</option><option value="CO">CO</option><option value="BTN" selected>BTN</option><option value="SB">SB</option><option value="BB">BB</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Stack (BB)</label><input type="number" id="post-stack" value="30" min="1" max="500"></div>
+      <div class="form-group"><label class="form-label">Pot Size (BB)</label><input type="number" id="post-pot" value="10" min="0" step="0.5"></div>
+      <div class="form-group"><label class="form-label">Street</label>
+        <select id="post-street"><option value="flop" selected>Flop</option><option value="turn">Turn</option><option value="river">River</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Facing Action</label>
+        <select id="post-facing" onchange="togglePostBetSize()"><option value="check_to_you">Checked to you</option><option value="bet">Facing a Bet</option><option value="check">Check-check (your turn)</option></select>
+      </div>
+      <div class="form-group" id="post-bet-group" style="display:none"><label class="form-label">Bet Size (BB)</label><input type="number" id="post-bet-size" value="5" min="0" step="0.5"></div>
+      <div class="form-group"><label class="form-label">Were you the preflop aggressor?</label>
+        <select id="post-aggressor"><option value="yes" selected>Yes (I raised pre)</option><option value="no">No (I called/checked)</option></select>
+      </div>
+    </div>
+    <button class="action-btn" id="postflop-btn" onclick="getPostflop()" disabled>Select your cards and board to get advice</button>
+    <div class="result" id="postflop-result"></div>
+  </div>
+
+  <!-- RANGES -->
+  <div class="panel" id="panel-ranges">
+    <div class="form-grid" style="margin-bottom:20px">
+      <div class="form-group"><label class="form-label">Position</label>
+        <select id="range-position" onchange="showRanges()"><option value="UTG">UTG</option><option value="MP">MP</option><option value="CO">CO</option><option value="BTN" selected>BTN</option><option value="SB">SB</option><option value="BB">BB</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Stack Depth (BB)</label>
+        <select id="range-stack" onchange="showRanges()"><option value="5">5 BB (Push/Fold)</option><option value="10">10 BB (Short)</option><option value="15">15 BB</option><option value="25">25 BB</option><option value="40" selected>40 BB (Standard)</option></select>
+      </div>
+    </div>
+    <div id="range-display"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// GTO ENGINE — All poker logic runs client-side
+// ═══════════════════════════════════════════════════════════════════════════
+
+const RANKS_STR = "23456789TJQKA";
+const RANK_VALUES = {};
+for (let i = 0; i < RANKS_STR.length; i++) RANK_VALUES[RANKS_STR[i]] = i;
+
+const PREMIUM = new Set(["AA","KK","QQ","AKs","AKo"]);
+const STRONG = new Set(["JJ","TT","AQs","AQo","AJs","KQs"]);
+const GOOD = new Set(["99","88","ATs","AJo","KJs","KQo","QJs"]);
+const PLAYABLE = new Set(["77","66","55","A9s","A8s","A7s","A6s","A5s","A4s","A3s","A2s","KTs","K9s","QTs","Q9s","JTs","J9s","T9s","98s","87s","76s","65s","54s","ATo","KJo","QJo","JTo"]);
+const MARGINAL = new Set(["44","33","22","K8s","K7s","K6s","K5s","K4s","K3s","K2s","Q8s","J8s","T8s","97s","86s","75s","64s","53s","43s","A9o","K9o","Q9o","J9o","T9o","98o"]);
+
+function normalizeHand(c1, c2) {
+  let r1=c1[0], s1=c1[1], r2=c2[0], s2=c2[1];
+  let v1=RANK_VALUES[r1], v2=RANK_VALUES[r2];
+  if (v1 < v2) { [r1,r2]=[r2,r1]; [s1,s2]=[s2,s1]; }
+  if (r1===r2) return r1+r2;
+  return s1===s2 ? r1+r2+"s" : r1+r2+"o";
+}
+
+function handCategory(h) {
+  if (PREMIUM.has(h)) return "premium";
+  if (STRONG.has(h)) return "strong";
+  if (GOOD.has(h)) return "good";
+  if (PLAYABLE.has(h)) return "playable";
+  if (MARGINAL.has(h)) return "marginal";
+  return "trash";
+}
+
+const POS_OPEN = {
+  UTG: new Set(["premium","strong"]),
+  MP: new Set(["premium","strong","good"]),
+  CO: new Set(["premium","strong","good","playable"]),
+  BTN: new Set(["premium","strong","good","playable","marginal"]),
+  SB: new Set(["premium","strong","good","playable"]),
+  BB: new Set()
+};
+
+function stackCat(bb) {
+  if (bb<=10) return "shove_or_fold";
+  if (bb<=15) return "short";
+  if (bb<=25) return "medium_short";
+  if (bb<=40) return "medium";
+  if (bb<=60) return "medium_deep";
+  return "deep";
+}
+
+function pushFoldRange(pos, bb) {
+  const ranges = {
+    5:{BTN:6,SB:6,BB:6,CO:6,MP:5,UTG:4},
+    7:{BTN:6,SB:5,BB:5,CO:5,MP:4,UTG:3},
+    10:{BTN:5,SB:4,BB:5,CO:4,MP:3,UTG:2}
+  };
+  const key = bb<=5?5:bb<=7?7:10;
+  const level = (ranges[key]||{})[pos]||2;
+  const tiers = ["premium","strong","good","playable","marginal","trash"];
+  return new Set(tiers.slice(0, level));
+}
+
+const BOARD_TEX = {
+  dry:{desc:"Rainbow, disconnected board",freq:0.70,size:0.33},
+  semi_wet:{desc:"Some draws possible",freq:0.55,size:0.50},
+  wet:{desc:"Many draws, connected, suited",freq:0.40,size:0.66},
+  monotone:{desc:"Three of one suit",freq:0.30,size:0.75},
+  paired:{desc:"Paired board",freq:0.65,size:0.33}
+};
+
+function counter(arr) {
+  const c = {};
+  arr.forEach(v => c[v] = (c[v]||0)+1);
+  return c;
+}
+
+function boardTexture(cards) {
+  if (!cards||cards.length<3) return null;
+  const ranks = cards.map(c=>RANK_VALUES[c[0]]);
+  const suits = cards.map(c=>c[1]);
+  const sc = counter(suits), rc = counter(ranks);
+  if (Math.max(...Object.values(sc))>=3) return "monotone";
+  if (Math.max(...Object.values(rc))>=2) return "paired";
+  const sorted = [...ranks].sort((a,b)=>a-b);
+  let gaps = 0;
+  for (let i=0;i<sorted.length-1;i++) if(sorted[i+1]-sorted[i]<=2) gaps++;
+  const fd = Math.max(...Object.values(sc))>=2;
+  if (gaps>=2&&fd) return "wet";
+  if (gaps>=1||fd) return "semi_wet";
+  return "dry";
+}
+
+function evalHand(hole, board) {
+  const all = [...hole,...board];
+  const ranks = all.map(c=>RANK_VALUES[c[0]]);
+  const suits = all.map(c=>c[1]);
+  const holeR = hole.map(c=>RANK_VALUES[c[0]]);
+  const boardR = board.map(c=>RANK_VALUES[c[0]]);
+  const rc = counter(ranks), sc = counter(suits), brc = counter(boardR);
+  
+  let strength="weak", made="high_card", draws=[];
+  const pairs = Object.keys(rc).filter(r=>rc[r]>=2).map(Number);
+  const trips = Object.keys(rc).filter(r=>rc[r]>=3).map(Number);
+  const quads = Object.keys(rc).filter(r=>rc[r]>=4).map(Number);
+  
+  let hasFlush = Object.values(sc).some(v=>v>=5);
+  const uniq = [...new Set(ranks)].sort((a,b)=>a-b);
+  let hasStraight = false;
+  for (let i=0;i<=uniq.length-5;i++) if(uniq[i+4]-uniq[i]===4){hasStraight=true;break;}
+  if ([0,1,2,3,12].every(v=>ranks.includes(v))) hasStraight=true;
+  
+  if (quads.length) { made="quads"; strength="monster"; }
+  else if (trips.length&&pairs.length>=2) { made="full_house"; strength="monster"; }
+  else if (hasFlush) { made="flush"; strength="very_strong"; }
+  else if (hasStraight) { made="straight"; strength="very_strong"; }
+  else if (trips.length) { made="three_of_a_kind"; strength = holeR.some(r=>trips.includes(r))?"strong":"medium"; }
+  else if (pairs.length>=2) { made="two_pair"; strength = Math.max(...pairs)>=10?"strong":"medium"; }
+  else if (pairs.length) {
+    const pr = pairs[0];
+    if (holeR.includes(pr)&&!(brc[pr])) {
+      if (pr>Math.max(...boardR)) { strength="strong"; made="overpair"; }
+      else { strength="medium"; made="one_pair"; }
+    } else if (pr===Math.max(...boardR)&&holeR.includes(pr)) { strength="medium"; made="top_pair"; }
+    else if (holeR.includes(pr)) { strength="weak_medium"; made="middle/bottom_pair"; }
+    else { strength="weak"; made="board_pair"; }
+  } else {
+    if (holeR.every(r=>r>Math.max(...boardR))) { strength="weak_draw"; made="overcards"; }
+    else { strength="weak"; made="high_card"; }
+  }
+  
+  for (const [s,cnt] of Object.entries(sc)) {
+    if (cnt===4 && hole.some(c=>c[1]===s)) draws.push("flush_draw");
+  }
+  for (const r of holeR) {
+    let con=0;
+    for (let o=-4;o<=4;o++) {
+      if (ranks.includes(r+o)) con++; else con=0;
+      if (con>=4){draws.push("straight_draw");break;}
+    }
+  }
+  return {strength, made_hand:made, draws:[...new Set(draws)]};
+}
+
+// ─── Preflop Advice ─────────────────────────────────────────────────────────
+function preflopAdvice(handStr, pos, stackBB, facing, villainPos, potBB, raiseSize) {
+  const cat = handCategory(handStr);
+  const sc = stackCat(stackBB);
+  const a = {hand:handStr,category:cat,position:pos,stack_depth:`${stackBB} BB (${sc})`,action:"",sizing:"",reasoning:"",confidence:"",alternative:""};
+
+  if (sc==="shove_or_fold") {
+    const pr = pushFoldRange(pos, stackBB);
+    if (pr.has(cat)) { a.action="ALL-IN"; a.sizing=`${stackBB} BB`; a.reasoning=`With ${stackBB}BB, Nash push/fold charts recommend shoving ${handStr} from ${pos}. Your fold equity + showdown equity make this +EV.`; a.confidence=["premium","strong"].includes(cat)?"HIGH":"MEDIUM"; }
+    else { a.action="FOLD"; a.sizing="—"; a.reasoning=`At ${stackBB}BB, ${handStr} is not in the Nash push range from ${pos}. Wait for a better spot.`; a.confidence="HIGH"; }
+    return a;
+  }
+
+  if (sc==="short") {
+    if (facing==="unopened") {
+      if (["premium","strong"].includes(cat)) { a.action="ALL-IN"; a.sizing=`${stackBB} BB`; a.reasoning="Short-stacked with a strong hand. Open-shoving maximizes fold equity and avoids difficult postflop spots."; a.confidence="HIGH"; }
+      else if (["good","playable"].includes(cat)&&["CO","BTN","SB"].includes(pos)) { a.action="ALL-IN"; a.sizing=`${stackBB} BB`; a.reasoning=`In late position with ${stackBB}BB, open-shoving ${handStr} exploits fold equity.`; a.confidence="MEDIUM"; }
+      else { a.action="FOLD"; a.reasoning=`${handStr} is not strong enough to commit with ${stackBB}BB from ${pos}.`; a.confidence="MEDIUM"; }
+    } else if (facing==="raised") {
+      if (cat==="premium") { a.action="ALL-IN (3-bet shove)"; a.sizing=`${stackBB} BB`; a.reasoning="Premium hand facing a raise—shove for maximum value."; a.confidence="HIGH"; }
+      else if (cat==="strong"&&stackBB<=13) { a.action="ALL-IN (3-bet shove)"; a.sizing=`${stackBB} BB`; a.reasoning=`Strong hand with only ${stackBB}BB, 3-bet shoving is the most +EV play vs the opener's range.`; a.confidence="MEDIUM-HIGH"; }
+      else { a.action="FOLD"; a.reasoning=`With ${stackBB}BB facing a raise, ${handStr} doesn't have enough equity to call or shove profitably from ${pos}.`; a.confidence="MEDIUM"; }
+    }
+    return a;
+  }
+
+  // Medium to deep
+  if (facing==="unopened") {
+    // BB special case: if it's unopened and you're in the BB, you check (you already posted)
+    if (pos==="BB") {
+      if (["premium","strong"].includes(cat)) {
+        a.action="CHECK (option)";
+        a.sizing="—";
+        a.reasoning=`Nobody raised—you get a free flop from the BB with ${handStr}. With a premium hand, checking disguises your strength. Some players raise here for value, but checking is the standard GTO play.`;
+        a.confidence="HIGH";
+        a.alternative="Raising your option is viable with premium hands to build the pot, especially vs loose limpers.";
+      } else {
+        a.action="CHECK (option)";
+        a.sizing="—";
+        a.reasoning=`Nobody raised—you see the flop for free from the BB. No need to put more chips in with ${handStr}. Take the free flop and play postflop.`;
+        a.confidence="HIGH";
+      }
+    } else {
+      const openRange = POS_OPEN[pos]||new Set();
+      if (openRange.has(cat)) {
+        let os = ["BTN","SB"].includes(pos)?2.2:2.5;
+        if (stackBB<=25) os=2.0;
+        a.action="RAISE"; a.sizing=`${os}x BB (${Math.round(os*(potBB/1.5)*10)/10} BB)`; a.reasoning=`${handStr} is in the GTO open-raise range from ${pos}. Standard sizing applies.`; a.confidence=["premium","strong"].includes(cat)?"HIGH":"MEDIUM";
+        if (cat==="premium") a.alternative="Consider a smaller open (2x) to keep villain's calling range wider, extracting more value long-term.";
+      } else { a.action="FOLD"; a.reasoning=`${handStr} (${cat}) is outside the recommended open range from ${pos} at this stack depth.`; a.confidence=cat==="trash"?"HIGH":"MEDIUM"; }
+    }
+  } else if (facing==="raised") {
+    const rp = villainPos||"unknown";
+    if (cat==="premium") {
+      const tbs = raiseSize?Math.round(raiseSize*3*10)/10:7.5;
+      const tbsbb = pos==="BB"?(raiseSize?Math.round(raiseSize*3.5*10)/10:8.75):tbs;
+      a.action="3-BET"; a.sizing=`${tbsbb} BB`; a.reasoning=`Premium hand facing a raise—3-bet for value. Against a ${rp} open, this is always a 3-bet.`; a.confidence="HIGH";
+    } else if (cat==="strong") {
+      if (["BTN","SB","BB"].includes(pos)) { const tbs=raiseSize?Math.round(raiseSize*3*10)/10:7.5; a.action="3-BET"; a.sizing=`${tbs} BB`; a.reasoning="Strong hand in position—3-bet to isolate and take initiative."; a.confidence="MEDIUM-HIGH"; a.alternative="Calling is also viable, especially vs tight UTG/MP opens."; }
+      else { a.action="CALL"; a.reasoning="Strong but out of position. Flatting keeps the pot manageable and avoids bloating it OOP."; a.confidence="MEDIUM"; }
+    } else if (["good","playable"].includes(cat)) {
+      if (["BTN","BB"].includes(pos)&&cat==="good") { a.action="CALL"; a.reasoning=`${handStr} plays well postflop. Call in position to realize equity.`; a.confidence="MEDIUM"; a.alternative="Can mix in 3-bets with suited combos as bluffs at ~15-20% frequency."; }
+      else if (pos==="BB"&&cat==="playable") { a.action="CALL (defend BB)"; a.reasoning=`Getting a discount from the BB. ${handStr} has enough equity to defend vs a standard open.`; a.confidence="MEDIUM"; }
+      else { a.action="FOLD"; a.reasoning=`${handStr} doesn't have enough equity to continue from ${pos} facing a raise.`; a.confidence="MEDIUM"; }
+    } else { a.action="FOLD"; a.reasoning=`${handStr} is too weak to continue facing a raise.`; a.confidence=cat==="trash"?"HIGH":"MEDIUM"; }
+  } else if (facing==="3bet") {
+    if (cat==="premium") {
+      if (["AA","KK"].includes(handStr)) {
+        if (stackBB<=40) { a.action="ALL-IN"; a.sizing=`${stackBB} BB`; }
+        else { const fb=raiseSize?Math.round(raiseSize*2.2*10)/10:20; a.action="4-BET"; a.sizing=`~${fb} BB`; }
+        a.reasoning="Top of range facing a 3-bet. 4-bet for value, stack off happily."; a.confidence="HIGH";
+      } else { a.action="CALL"; a.reasoning=`${handStr} is strong enough to flat the 3-bet and play postflop.`; a.confidence="MEDIUM-HIGH"; a.alternative="4-betting is fine at mixed frequency, especially AKs."; }
+    } else if (cat==="strong"&&["BTN","CO"].includes(pos)) { a.action="CALL"; a.reasoning=`${handStr} has enough equity to see a flop in position.`; a.confidence="MEDIUM"; }
+    else { a.action="FOLD"; a.reasoning=`${handStr} doesn't have enough equity to continue vs a 3-bet at this stack depth.`; a.confidence="MEDIUM-HIGH"; }
+  } else if (facing==="all_in") {
+    if (cat==="premium") { a.action="CALL"; a.reasoning="Premium hand—call the all-in. You're ahead of most shoving ranges."; a.confidence="HIGH"; }
+    else if (cat==="strong"&&stackBB<=20) { a.action="CALL"; a.reasoning=`With ${stackBB}BB and a strong hand, you're likely ahead of villain's push range.`; a.confidence="MEDIUM"; }
+    else { a.action="FOLD"; a.reasoning=`${handStr} doesn't have enough equity to call an all-in.`; a.confidence="MEDIUM"; }
+  }
+  return a;
+}
+
+// ─── Postflop Advice ────────────────────────────────────────────────────────
+function postflopAdvice(hole, board, pos, stackBB, potBB, facing, betSize, street, isAgg) {
+  const he = evalHand(hole, board);
+  const tex = boardTexture(board);
+  const ti = BOARD_TEX[tex]||BOARD_TEX.semi_wet;
+  const a = {hand_eval:he,board_texture:tex,texture_description:ti.desc,action:"",sizing:"",reasoning:"",confidence:"",alternative:""};
+  const {strength} = he;
+  const draws = he.draws;
+  const hasDraw = draws.length>0;
+  const spr = potBB>0?stackBB/potBB:999;
+
+  if (isAgg && facing==="check_to_you") {
+    if (strength==="monster") { const bp=0.75; a.action="BET (Value)"; a.sizing=`${Math.round(potBB*bp*10)/10} BB (${Math.round(bp*100)}% pot)`; a.reasoning=`Monster hand (${he.made_hand.replace(/_/g,' ')}) on a ${tex} board. Bet large for value—you want to build the pot.`; a.confidence="HIGH"; a.alternative="Can slow-play on very dry boards at low frequency."; }
+    else if (strength==="very_strong") { const bp=0.66; a.action="BET (Value)"; a.sizing=`${Math.round(potBB*bp*10)/10} BB (${Math.round(bp*100)}% pot)`; a.reasoning=`Very strong hand. Bet for value and protection on a ${tex} board.`; a.confidence="HIGH"; }
+    else if (strength==="strong") { const bp=ti.size; a.action="BET (Value/Protection)"; a.sizing=`${Math.round(potBB*bp*10)/10} BB (${Math.round(bp*100)}% pot)`; a.reasoning=`Strong hand on a ${tex} board. C-bet for value and to deny equity.`; a.confidence="MEDIUM-HIGH"; }
+    else if (strength==="medium") {
+      if (["dry","paired"].includes(tex)) { a.action="BET (Thin value / Protection)"; a.sizing=`${Math.round(potBB*0.33*10)/10} BB (33% pot)`; a.reasoning=`Medium-strength hand on a ${tex} board. Small c-bet to get value from worse and fold out overcards.`; a.confidence="MEDIUM"; a.alternative="Check-back is also fine to control pot size."; }
+      else { a.action="CHECK"; a.sizing="—"; a.reasoning=`Medium hand on a ${tex} board. Check to control pot and avoid getting blown off your hand.`; a.confidence="MEDIUM"; }
+    } else if (hasDraw) {
+      if (draws.includes("flush_draw")&&draws.includes("straight_draw")) { a.action="BET (Semi-bluff)"; a.sizing=`${Math.round(potBB*0.66*10)/10} BB (66% pot)`; a.reasoning="Combo draw—semi-bluff aggressively. You have massive equity even if called."; a.confidence="HIGH"; }
+      else if (draws.includes("flush_draw")) { a.action="BET (Semi-bluff)"; a.sizing=`${Math.round(potBB*ti.size*10)/10} BB (${Math.round(ti.size*100)}% pot)`; a.reasoning="Flush draw—good semi-bluff candidate with ~35% equity."; a.confidence="MEDIUM"; a.alternative="Check-call can also work to realize equity cheaply."; }
+      else { a.action=street==="flop"?"BET (Semi-bluff)":"CHECK"; a.sizing=street==="flop"?`${Math.round(potBB*0.33*10)/10} BB`:"—"; a.reasoning="Straight draw. Small semi-bluff on the flop; check turn if still drawing."; a.confidence="MEDIUM"; }
+    } else {
+      const cbetOk = ["dry","paired"].includes(tex)&&street==="flop";
+      if (cbetOk&&["BTN","CO","SB"].includes(pos)) { a.action="BET (C-bet bluff)"; a.sizing=`${Math.round(potBB*0.33*10)/10} BB (33% pot)`; a.reasoning=`Dry/paired board favors the preflop aggressor. Small c-bet as a bluff at ~${Math.round(ti.freq*100)}% frequency.`; a.confidence="MEDIUM"; a.alternative="Check-fold is fine—you're bluffing here, so don't over-invest."; }
+      else { a.action="CHECK"; a.sizing="—"; a.reasoning=`Weak hand on a ${tex} board. Give up and check—the board doesn't favor a bluff here.`; a.confidence="MEDIUM-HIGH"; }
+    }
+  } else if (facing==="bet"&&betSize>0) {
+    const potOdds = betSize/(potBB+betSize);
+    const bpop = potBB>0?betSize/potBB:0;
+    if (["monster","very_strong"].includes(strength)) {
+      if (spr<=2) { a.action="ALL-IN (Raise)"; a.sizing=`${stackBB} BB`; a.reasoning=`Very strong hand with low SPR (${Math.round(spr*10)/10}). Get it all in now.`; }
+      else { a.action="RAISE"; a.sizing=`${Math.round(betSize*2.5*10)/10} BB`; a.reasoning="Strong hand—raise for value. You're ahead of villain's betting range."; }
+      a.confidence="HIGH";
+    } else if (strength==="strong") { a.action="CALL"; a.sizing=`${betSize} BB`; a.reasoning="Strong hand, but raising could fold out worse hands. Call and let villain keep barreling."; a.confidence="MEDIUM-HIGH"; a.alternative="Raise is viable on wet boards for protection."; }
+    else if (strength==="medium") {
+      if (potOdds<=0.33) { a.action="CALL"; a.sizing=`${betSize} BB`; a.reasoning=`Getting decent odds (${Math.round(potOdds*100)}% needed). Your hand has showdown value—call and reassess.`; a.confidence="MEDIUM"; }
+      else if (street==="river") { a.action="FOLD"; a.reasoning=`Medium hand facing a river bet of ${Math.round(bpop*100)}% pot. Without strong reads, folding is disciplined.`; a.confidence="MEDIUM"; a.alternative="Call if you have a strong read that villain bluffs at high frequency."; }
+      else { a.action="CALL"; a.reasoning="Medium hand with streets left. Call to see if the turn/river improves or clarifies."; a.confidence="MEDIUM"; }
+    } else if (hasDraw) {
+      let de = draws.includes("flush_draw")?0.35:0.17;
+      if (draws.includes("flush_draw")&&draws.includes("straight_draw")) de=0.50;
+      if (de>=potOdds) { a.action="CALL"; a.sizing=`${betSize} BB`; a.reasoning=`Drawing hand with ~${Math.round(de*100)}% equity, needing ${Math.round(potOdds*100)}% to call. Math says call.`; a.confidence="MEDIUM-HIGH"; if(de>potOdds+0.1&&spr>3) a.alternative="Semi-bluff raise is viable with this much equity + fold equity."; }
+      else { if(street!=="river"&&spr>3){a.action="RAISE (Semi-bluff)";a.sizing=`${Math.round(betSize*2.5*10)/10} BB`;a.reasoning="Drawing hand without direct odds, but fold equity makes a raise profitable.";a.confidence="MEDIUM";a.alternative=`Fold is also acceptable—you need ~${Math.round(potOdds*100)}% equity and have ~${Math.round(de*100)}%.`;}else{a.action="FOLD";a.reasoning="Drawing hand on the river—you missed. No more cards to come.";a.confidence="HIGH";}}
+    } else { a.action="FOLD"; a.reasoning="Weak hand facing a bet. You don't have the odds or equity to continue."; a.confidence="HIGH"; }
+  } else if (facing==="check") {
+    if (["monster","very_strong","strong"].includes(strength)) { a.action="BET (Delayed value)"; a.sizing=`${Math.round(potBB*0.66*10)/10} BB (66% pot)`; a.reasoning="Strong hand after villain checks. Bet for value—don't give free cards."; a.confidence="HIGH"; }
+    else if (hasDraw) { a.action="BET (Semi-bluff)"; a.sizing=`${Math.round(potBB*0.5*10)/10} BB (50% pot)`; a.reasoning="Drawing hand with fold equity—semi-bluff when checked to."; a.confidence="MEDIUM"; }
+    else { a.action="CHECK"; a.sizing="—"; a.reasoning="Weak hand. Check behind to see a free card or get to showdown."; a.confidence="MEDIUM"; }
+  }
+  return a;
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// UI CODE — Card pickers, tabs, display
+// ═══════════════════════════════════════════════════════════════════════════
+
+const RANKS = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
+const SUITS = [
+  {char:'s',symbol:'♠',name:'spades',color:'spade'},
+  {char:'h',symbol:'♥',name:'hearts',color:'heart'},
+  {char:'d',symbol:'♦',name:'diamonds',color:'diamond'},
+  {char:'c',symbol:'♣',name:'clubs',color:'club'},
+];
+
+const pickerState = {
+  'preflop':{cards:[null,null],activeSlot:0,selectedRank:null},
+  'post-hole':{cards:[null,null],activeSlot:0,selectedRank:null},
+  'board':{cards:[null,null,null,null,null],activeSlot:0,selectedRank:null},
+};
+
+function getAllUsedCards() {
+  const used = new Set();
+  for (const g of Object.values(pickerState)) for (const c of g.cards) if(c) used.add(c);
+  return used;
+}
+
+function initPicker(group) {
+  const rr = document.getElementById(`${group}-rank-picker`);
+  const sr = document.getElementById(`${group}-suit-picker`);
+  if(!rr||!sr) return;
+  rr.innerHTML=''; RANKS.forEach(r=>{const b=document.createElement('button');b.className='rank-btn';b.textContent=r;b.dataset.rank=r;b.onclick=()=>selectRank(group,r);rr.appendChild(b);});
+  sr.innerHTML=''; SUITS.forEach(s=>{const b=document.createElement('button');b.className=`suit-btn ${s.name}`;b.innerHTML=s.symbol;b.dataset.suit=s.char;b.onclick=()=>selectSuit(group,s.char);sr.appendChild(b);});
+}
+
+function selectRank(g,r){pickerState[g].selectedRank=r;refreshPicker(g);}
+function selectSuit(g,s){
+  const st=pickerState[g]; if(!st.selectedRank)return;
+  const card=st.selectedRank+s; if(getAllUsedCards().has(card))return;
+  st.cards[st.activeSlot]=card; st.selectedRank=null;
+  const ne=st.cards.findIndex((c,i)=>c===null&&i>st.activeSlot);
+  if(ne!==-1) st.activeSlot=ne;
+  refreshPicker(g); refreshAllPickers(); updateButtons();
+}
+function activateSlot(g,i){const st=pickerState[g];if(st.cards[i]){st.cards[i]=null;st.activeSlot=i;st.selectedRank=null;refreshAllPickers();updateButtons();return;}st.activeSlot=i;st.selectedRank=null;refreshPicker(g);}
+function removeCard(g,i){pickerState[g].cards[i]=null;pickerState[g].activeSlot=i;pickerState[g].selectedRank=null;refreshAllPickers();updateButtons();}
+
+function refreshPicker(g) {
+  const st=pickerState[g], used=getAllUsedCards();
+  st.cards.forEach((card,i)=>{
+    let sid; if(g==='preflop')sid=`preflop-slot-${i}`; else if(g==='post-hole')sid=`post-hole-slot-${i}`; else sid=`board-slot-${i}`;
+    const slot=document.getElementById(sid); if(!slot)return;
+    if(card){const so=SUITS.find(s=>s.char===card[1]);slot.className=`card-slot filled ${so.name==='hearts'||so.name==='diamonds'?'heart':'spade'}`;slot.innerHTML=`${card[0]}${so.symbol}<span class="remove" onclick="event.stopPropagation();removeCard('${g}',${i})">×</span>`;}
+    else{slot.className='card-slot';const labels=g==='board'?['F1','F2','F3','T','R']:['1','2'];slot.textContent=labels[i]||(i+1);}
+    if(i===st.activeSlot&&!card){slot.style.borderColor='var(--green)';slot.style.borderStyle='solid';}else{slot.style.borderColor='';slot.style.borderStyle=card?'solid':'dashed';}
+  });
+  document.querySelectorAll(`#${g}-rank-picker .rank-btn`).forEach(b=>b.classList.toggle('selected',b.dataset.rank===st.selectedRank));
+  document.querySelectorAll(`#${g}-suit-picker .suit-btn`).forEach(b=>{b.classList.remove('selected-s','selected-h','selected-d','selected-c','used');if(st.selectedRank&&used.has(st.selectedRank+b.dataset.suit))b.classList.add('used');});
+}
+function refreshAllPickers(){for(const g of Object.keys(pickerState))refreshPicker(g);}
+function updateButtons(){
+  const preCards=pickerState.preflop.cards.filter(Boolean),preBtn=document.getElementById('preflop-btn');
+  preBtn.disabled=preCards.length!==2; preBtn.textContent=preCards.length===2?'GET GTO ADVICE →':'Select your cards to get advice';
+  const ph=pickerState['post-hole'].cards.filter(Boolean),bc=pickerState.board.cards.filter(Boolean),postBtn=document.getElementById('postflop-btn');
+  postBtn.disabled=!(ph.length===2&&bc.length>=3); postBtn.textContent=(ph.length===2&&bc.length>=3)?'GET GTO ADVICE →':'Select your cards and board to get advice';
+}
+
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById(`panel-${t.dataset.tab}`).classList.add('active');if(t.dataset.tab==='ranges')showRanges();}));
+
+function toggleVillainFields(){const f=document.getElementById('pre-facing').value,s=f!=='unopened';document.getElementById('villain-pos-group').style.display=s?'':'none';document.getElementById('raise-size-group').style.display=s?'':'none';}
+function togglePostBetSize(){document.getElementById('post-bet-group').style.display=document.getElementById('post-facing').value==='bet'?'':'none';}
+
+function getPreflop(){
+  const cards=pickerState.preflop.cards;
+  const handStr=normalizeHand(cards[0],cards[1]);
+  const result=preflopAdvice(handStr,document.getElementById('pre-position').value,parseFloat(document.getElementById('pre-stack').value),document.getElementById('pre-facing').value,document.getElementById('pre-villain-pos').value,parseFloat(document.getElementById('pre-pot').value),parseFloat(document.getElementById('pre-raise-size').value));
+  displayPreflopResult(result);
+}
+function getPostflop(){
+  const hole=pickerState['post-hole'].cards.filter(Boolean), board=pickerState.board.cards.filter(Boolean);
+  let street='flop';if(board.length===4)street='turn';if(board.length===5)street='river';
+  document.getElementById('post-street').value=street;
+  const result=postflopAdvice(hole,board,document.getElementById('post-position').value,parseFloat(document.getElementById('post-stack').value),parseFloat(document.getElementById('post-pot').value),document.getElementById('post-facing').value,parseFloat(document.getElementById('post-bet-size').value),street,document.getElementById('post-aggressor').value==='yes');
+  displayPostflopResult(result);
+}
+
+function getActionClass(a){a=a.toLowerCase();if(a.includes('all-in')||a.includes('all_in'))return'all-in';if(a.includes('raise')||a.includes('bet')||a.includes('3-bet')||a.includes('4-bet'))return'raise';if(a.includes('call'))return'call';if(a.includes('fold'))return'fold';if(a.includes('check'))return'check';return'';}
+function getConfWidth(c){c=(c||'').toUpperCase();if(c==='HIGH')return{width:'95%',cls:'conf-high'};if(c==='MEDIUM-HIGH')return{width:'78%',cls:'conf-med-high'};if(c==='MEDIUM')return{width:'60%',cls:'conf-med'};return{width:'40%',cls:'conf-low'};}
+
+function displayPreflopResult(r){
+  const el=document.getElementById('preflop-result'),conf=getConfWidth(r.confidence);
+  el.innerHTML=`<div class="result-header"><span class="result-action ${getActionClass(r.action)}">${r.action}</span>${r.sizing&&r.sizing!=='—'?`<span class="result-sizing">${r.sizing}</span>`:''}</div><div class="result-body"><div class="result-row"><span class="result-tag tag-hand">HAND</span><span class="result-text">${r.hand} (${r.category}) — ${r.stack_depth}</span></div><div class="result-row"><span class="result-tag tag-reason">REASONING</span><span class="result-text">${r.reasoning}</span></div>${r.alternative?`<div class="result-row"><span class="result-tag tag-alt">ALSO</span><span class="result-text">${r.alternative}</span></div>`:''}<div class="result-row"><span class="result-tag tag-conf">CONFIDENCE</span><span class="result-text">${r.confidence}</span></div><div class="confidence-bar"><div class="confidence-fill ${conf.cls}" style="width:${conf.width}"></div></div></div>`;
+  el.classList.add('show');
+}
+function displayPostflopResult(r){
+  const el=document.getElementById('postflop-result'),conf=getConfWidth(r.confidence),h=r.hand_eval||{};
+  el.innerHTML=`<div class="result-header"><span class="result-action ${getActionClass(r.action)}">${r.action}</span>${r.sizing&&r.sizing!=='—'?`<span class="result-sizing">${r.sizing}</span>`:''}</div><div class="result-body"><div class="result-row"><span class="result-tag tag-hand">HAND</span><span class="result-text">${(h.made_hand||'').replace(/_/g,' ')} (${h.strength||''})${h.draws&&h.draws.length?' + '+h.draws.map(d=>d.replace(/_/g,' ')).join(', '):''}</span></div><div class="result-row"><span class="result-tag tag-board">BOARD</span><span class="result-text">${(r.board_texture||'').replace(/_/g,' ')} — ${r.texture_description||''}</span></div><div class="result-row"><span class="result-tag tag-reason">REASONING</span><span class="result-text">${r.reasoning}</span></div>${r.alternative?`<div class="result-row"><span class="result-tag tag-alt">ALSO</span><span class="result-text">${r.alternative}</span></div>`:''}<div class="result-row"><span class="result-tag tag-conf">CONFIDENCE</span><span class="result-text">${r.confidence}</span></div><div class="confidence-bar"><div class="confidence-fill ${conf.cls}" style="width:${conf.width}"></div></div></div>`;
+  el.classList.add('show');
+}
+
+const RANGE_DATA={premium:['AA','KK','QQ','AKs','AKo'],strong:['JJ','TT','AQs','AQo','AJs','KQs'],good:['99','88','ATs','AJo','KJs','KQo','QJs'],playable:['77','66','55','A9s-A2s','KTs','K9s','QTs','Q9s','JTs','J9s','T9s','98s','87s','76s','65s','54s','ATo','KJo','QJo','JTo']};
+const POS_RANGES={UTG:['premium','strong'],MP:['premium','strong','good'],CO:['premium','strong','good','playable'],BTN:['premium','strong','good','playable'],SB:['premium','strong','good','playable'],BB:['premium','strong','good','playable']};
+
+function showRanges(){
+  const pos=document.getElementById('range-position').value,stack=parseInt(document.getElementById('range-stack').value),container=document.getElementById('range-display');
+  const ranges=POS_RANGES[pos]||[];
+  let html=`<div class="quick-ref"><div class="quick-ref-title">${pos} Open Range — ${stack} BB</div>`;
+  if(stack<=10)html+=`<p style="color:var(--text2);font-size:14px;margin-bottom:14px;">At ${stack} BB, use push/fold charts. All opens should be all-in.</p>`;
+  for(const tier of ranges){html+=`<div style="margin-bottom:12px;"><div class="form-label" style="margin-bottom:6px;">${tier.toUpperCase()}</div><div class="range-grid">`;for(const hand of RANGE_DATA[tier]||[])html+=`<div class="range-item range-${tier}">${hand}</div>`;html+='</div></div>';}
+  html+='</div>';container.innerHTML=html;
+}
+
+initPicker('preflop');initPicker('post-hole');initPicker('board');refreshAllPickers();showRanges();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MULTI-TABLE SYSTEM — Independent state per table
+// ═══════════════════════════════════════════════════════════════════════════
+
+let currentTable = 0;
+let tableCount = 1;
+const tableStates = {};
+
+function getDefaultTableState() {
+  return {
+    preflop: { cards: [null, null], activeSlot: 0, selectedRank: null },
+    'post-hole': { cards: [null, null], activeSlot: 0, selectedRank: null },
+    board: { cards: [null, null, null, null, null], activeSlot: 0, selectedRank: null },
+    // Form values
+    prePosition: 'BTN', preStack: 30, preFacing: 'unopened', prePot: 1.5,
+    preVillainPos: 'CO', preRaiseSize: 2.5,
+    postPosition: 'BTN', postStack: 30, postPot: 10, postStreet: 'flop',
+    postFacing: 'check_to_you', postBetSize: 5, postAggressor: 'yes',
+    // Results
+    preflopResult: null, postflopResult: null,
+    // Active panel tab
+    activeTab: 'preflop'
+  };
+}
+
+// Initialize first table
+tableStates[0] = getDefaultTableState();
+
+function saveCurrentTableState() {
+  const state = tableStates[currentTable];
+  if (!state) return;
+  
+  // Save picker states
+  state.preflop = JSON.parse(JSON.stringify(pickerState.preflop));
+  state['post-hole'] = JSON.parse(JSON.stringify(pickerState['post-hole']));
+  state.board = JSON.parse(JSON.stringify(pickerState.board));
+  
+  // Save form values
+  state.prePosition = document.getElementById('pre-position').value;
+  state.preStack = document.getElementById('pre-stack').value;
+  state.preFacing = document.getElementById('pre-facing').value;
+  state.prePot = document.getElementById('pre-pot').value;
+  state.preVillainPos = document.getElementById('pre-villain-pos').value;
+  state.preRaiseSize = document.getElementById('pre-raise-size').value;
+  state.postPosition = document.getElementById('post-position').value;
+  state.postStack = document.getElementById('post-stack').value;
+  state.postPot = document.getElementById('post-pot').value;
+  state.postStreet = document.getElementById('post-street').value;
+  state.postFacing = document.getElementById('post-facing').value;
+  state.postBetSize = document.getElementById('post-bet-size').value;
+  state.postAggressor = document.getElementById('post-aggressor').value;
+  
+  // Save which panel tab is active
+  const activeTab = document.querySelector('.tab.active');
+  if (activeTab) state.activeTab = activeTab.dataset.tab;
+  
+  // Save result HTML
+  const preflopResult = document.getElementById('preflop-result');
+  const postflopResult = document.getElementById('postflop-result');
+  state.preflopResultHTML = preflopResult.classList.contains('show') ? preflopResult.innerHTML : null;
+  state.postflopResultHTML = postflopResult.classList.contains('show') ? postflopResult.innerHTML : null;
+}
+
+function loadTableState(tableId) {
+  const state = tableStates[tableId];
+  if (!state) return;
+  
+  // Restore picker states
+  pickerState.preflop = JSON.parse(JSON.stringify(state.preflop));
+  pickerState['post-hole'] = JSON.parse(JSON.stringify(state['post-hole']));
+  pickerState.board = JSON.parse(JSON.stringify(state.board));
+  
+  // Restore form values
+  document.getElementById('pre-position').value = state.prePosition;
+  document.getElementById('pre-stack').value = state.preStack;
+  document.getElementById('pre-facing').value = state.preFacing;
+  document.getElementById('pre-pot').value = state.prePot;
+  document.getElementById('pre-villain-pos').value = state.preVillainPos;
+  document.getElementById('pre-raise-size').value = state.preRaiseSize;
+  document.getElementById('post-position').value = state.postPosition;
+  document.getElementById('post-stack').value = state.postStack;
+  document.getElementById('post-pot').value = state.postPot;
+  document.getElementById('post-street').value = state.postStreet;
+  document.getElementById('post-facing').value = state.postFacing;
+  document.getElementById('post-bet-size').value = state.postBetSize;
+  document.getElementById('post-aggressor').value = state.postAggressor;
+  
+  // Restore visibility toggles
+  toggleVillainFields();
+  togglePostBetSize();
+  
+  // Restore results
+  const preflopResult = document.getElementById('preflop-result');
+  const postflopResult = document.getElementById('postflop-result');
+  if (state.preflopResultHTML) { preflopResult.innerHTML = state.preflopResultHTML; preflopResult.classList.add('show'); }
+  else { preflopResult.innerHTML = ''; preflopResult.classList.remove('show'); }
+  if (state.postflopResultHTML) { postflopResult.innerHTML = state.postflopResultHTML; postflopResult.classList.add('show'); }
+  else { postflopResult.innerHTML = ''; postflopResult.classList.remove('show'); }
+  
+  // Restore active panel tab
+  if (state.activeTab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    const tab = document.querySelector(`.tab[data-tab="${state.activeTab}"]`);
+    if (tab) tab.classList.add('active');
+    const panel = document.getElementById(`panel-${state.activeTab}`);
+    if (panel) panel.classList.add('active');
+  }
+  
+  // Refresh pickers and buttons
+  refreshAllPickers();
+  updateButtons();
+  
+  // Clear voice transcripts
+  document.querySelectorAll('.voice-transcript').forEach(el => { el.innerHTML = ''; el.classList.remove('show'); });
+}
+
+function getTableStatus(tableId) {
+  const state = tableStates[tableId];
+  if (!state) return { label: '—', cls: 'status-empty' };
+  const hasHole = state.preflop.cards.some(c => c !== null);
+  const hasBoard = state.board.cards.some(c => c !== null);
+  if (hasBoard) return { label: 'POST', cls: 'status-postflop' };
+  if (hasHole) return { label: 'PRE', cls: 'status-preflop' };
+  return { label: '—', cls: 'status-empty' };
+}
+
+function renderTableBar() {
+  const bar = document.getElementById('table-bar');
+  let html = '';
+  
+  for (let i = 0; i < tableCount; i++) {
+    if (!tableStates[i]) continue;
+    const isActive = i === currentTable;
+    const status = getTableStatus(i);
+    html += `<button class="table-tab ${isActive ? 'active' : ''}" data-table="${i}" onclick="switchTable(${i})">
+      Table ${i + 1} <span class="table-status ${status.cls}">${status.label}</span>
+      ${tableCount > 1 ? `<span class="close-tab" onclick="event.stopPropagation();removeTable(${i})" title="Close table">×</span>` : ''}
+    </button>`;
+  }
+  
+  html += `<button class="add-table-btn" onclick="addTable()" title="Add table">+</button>`;
+  bar.innerHTML = html;
+}
+
+function switchTable(tableId) {
+  if (tableId === currentTable) return;
+  if (!tableStates[tableId]) return;
+  
+  // Save current state
+  saveCurrentTableState();
+  
+  // Switch
+  currentTable = tableId;
+  
+  // Load new state
+  loadTableState(tableId);
+  
+  // Update tab bar
+  renderTableBar();
+}
+
+function addTable() {
+  // Save current table first
+  saveCurrentTableState();
+  
+  // Find next available ID
+  const newId = tableCount;
+  tableCount++;
+  tableStates[newId] = getDefaultTableState();
+  
+  // Switch to new table
+  currentTable = newId;
+  loadTableState(newId);
+  renderTableBar();
+}
+
+function removeTable(tableId) {
+  if (Object.keys(tableStates).length <= 1) return;
+  
+  delete tableStates[tableId];
+  
+  // If we deleted the current table, switch to another
+  if (tableId === currentTable) {
+    const remaining = Object.keys(tableStates).map(Number);
+    currentTable = remaining[0];
+    loadTableState(currentTable);
+  }
+  
+  renderTableBar();
+}
+
+function clearCurrentTable() {
+  tableStates[currentTable] = getDefaultTableState();
+  loadTableState(currentTable);
+  renderTableBar();
+}
+
+// Update table bar status whenever cards change
+const originalUpdateButtons = updateButtons;
+updateButtons = function() {
+  originalUpdateButtons();
+  // Save state and update table bar to reflect card status
+  if (tableStates[currentTable]) {
+    tableStates[currentTable].preflop = JSON.parse(JSON.stringify(pickerState.preflop));
+    tableStates[currentTable]['post-hole'] = JSON.parse(JSON.stringify(pickerState['post-hole']));
+    tableStates[currentTable].board = JSON.parse(JSON.stringify(pickerState.board));
+  }
+  renderTableBar();
+};
+
+// Initial render
+renderTableBar();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// VOICE INPUT ENGINE — Speech recognition + natural language poker parsing
+// ═══════════════════════════════════════════════════════════════════════════
+
+let voiceActive = null;
+let recognition = null;
+let fullTranscript = '';
+let voiceTimeout = null;
+
+function initSpeech() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return null;
+  const r = new SR();
+  r.continuous = true;
+  r.interimResults = true;
+  r.lang = 'en-US';
+  r.maxAlternatives = 3;
+  return r;
+}
+
+function toggleVoice(panel) {
+  if (!recognition) recognition = initSpeech();
+  if (!recognition) { alert('Speech recognition is not supported in this browser. Try Chrome or Edge.'); return; }
+
+  const btn = document.getElementById(`voice-btn-${panel}`);
+  const label = document.getElementById(`voice-label-${panel}`);
+
+  if (voiceActive === panel) {
+    // Stop listening and process
+    recognition.stop();
+    if (voiceTimeout) clearTimeout(voiceTimeout);
+    voiceActive = null;
+    btn.classList.remove('listening');
+    label.textContent = panel === 'preflop' ? 'Tap to speak your hand' : 'Tap to speak the situation';
+    // Process final transcript
+    if (fullTranscript.trim()) {
+      processVoice(panel, fullTranscript.trim());
+    }
+    fullTranscript = '';
+    return;
+  }
+
+  // Stop any other active session
+  if (voiceActive) {
+    const oldBtn = document.getElementById(`voice-btn-${voiceActive}`);
+    const oldLabel = document.getElementById(`voice-label-${voiceActive}`);
+    if (oldBtn) oldBtn.classList.remove('listening');
+    if (oldLabel) oldLabel.textContent = 'Tap to speak your hand';
+    recognition.stop();
+  }
+
+  voiceActive = panel;
+  fullTranscript = '';
+  btn.classList.add('listening');
+  label.textContent = 'Listening... tap again when done';
+
+  recognition.onresult = (e) => {
+    // Build up the full transcript from all results
+    let accumulated = '';
+    for (let i = 0; i < e.results.length; i++) {
+      accumulated += e.results[i][0].transcript;
+    }
+    
+    const transcriptEl = document.getElementById(`voice-transcript-${panel}`);
+    transcriptEl.innerHTML = `<span class="raw">"${accumulated}"</span><br><span style="color:var(--text3);font-size:11px;">Listening... tap the button again when done speaking</span>`;
+    transcriptEl.classList.add('show');
+    
+    fullTranscript = accumulated;
+    
+    // Auto-process after 3 seconds of silence
+    if (voiceTimeout) clearTimeout(voiceTimeout);
+    voiceTimeout = setTimeout(() => {
+      if (voiceActive === panel && fullTranscript.trim()) {
+        recognition.stop();
+        voiceActive = null;
+        btn.classList.remove('listening');
+        label.textContent = panel === 'preflop' ? 'Tap to speak your hand' : 'Tap to speak the situation';
+        processVoice(panel, fullTranscript.trim());
+        fullTranscript = '';
+      }
+    }, 3000);
+  };
+
+  recognition.onerror = (e) => {
+    console.error('Speech error:', e.error);
+    if (e.error === 'no-speech') {
+      // Restart if no speech detected
+      try { recognition.start(); } catch(ex) {}
+      return;
+    }
+    btn.classList.remove('listening');
+    label.textContent = panel === 'preflop' ? 'Tap to speak your hand' : 'Tap to speak the situation';
+    voiceActive = null;
+    fullTranscript = '';
+    if (e.error === 'not-allowed') alert('Microphone access denied. Please allow microphone access in your browser settings.');
+  };
+
+  recognition.onend = () => {
+    // If we're still supposed to be listening, restart
+    if (voiceActive === panel) {
+      try { recognition.start(); } catch(ex) {}
+      return;
+    }
+    btn.classList.remove('listening');
+    label.textContent = panel === 'preflop' ? 'Tap to speak your hand' : 'Tap to speak the situation';
+  };
+
+  try { recognition.start(); } catch(ex) { recognition.stop(); setTimeout(() => recognition.start(), 100); }
+}
+
+function processVoice(panel, transcript) {
+  const transcriptEl = document.getElementById(`voice-transcript-${panel}`);
+  const parsed = panel === 'preflop' ? parsePreflopVoice(transcript) : parsePostflopVoice(transcript);
+  transcriptEl.innerHTML = `<span class="raw">"${transcript}"</span><br><span class="parsed">${parsed.summary}</span>`;
+  transcriptEl.classList.add('show');
+  
+  if (parsed.success) {
+    if (panel === 'preflop') applyPreflopVoice(parsed);
+    else applyPostflopVoice(parsed);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STREET-BY-STREET VOICE — Separate mic for hole, flop, turn, river
+// ═══════════════════════════════════════════════════════════════════════════
+
+let streetVoiceActive = null;
+let streetRecognition = null;
+let streetTranscript = '';
+let streetTimeout = null;
+
+// ── Hand Stack Tracker ──
+let handTracker = {
+  startingStack: 30,
+  currentStack: 30,
+  currentPot: 0,
+  lastStreetBet: 0,       // the bet we were facing last street
+  lastStreetFacing: null,  // what we were facing last street
+};
+
+function updateStackDisplay() {
+  const stackEl = document.getElementById('post-stack');
+  stackEl.value = Math.round(handTracker.currentStack * 10) / 10;
+  // If bet would be >= remaining stack, note it's an all-in
+  const betEl = document.getElementById('post-bet-size');
+  const betVal = parseFloat(betEl.value) || 0;
+  if (betVal >= handTracker.currentStack && betVal > 0) {
+    const transcriptEl = document.getElementById('voice-transcript-street');
+    const prev = transcriptEl.innerHTML;
+    transcriptEl.innerHTML = prev + `<br><span style="color:var(--yellow);">⚠ Bet of ${betVal}BB = your ALL-IN (${Math.round(handTracker.currentStack*10)/10}BB remaining)</span>`;
+  }
+}
+
+function initStreetSpeech() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return null;
+  const r = new SR();
+  r.continuous = true;
+  r.interimResults = true;
+  r.lang = 'en-US';
+  r.maxAlternatives = 3;
+  return r;
+}
+
+function toggleStreetVoice(street) {
+  if (!streetRecognition) streetRecognition = initStreetSpeech();
+  if (!streetRecognition) { alert('Speech recognition not supported. Try Chrome.'); return; }
+  
+  const btn = document.getElementById(`voice-btn-${street}`);
+  
+  // If already listening on this street, stop and process
+  if (streetVoiceActive === street) {
+    streetRecognition.stop();
+    if (streetTimeout) clearTimeout(streetTimeout);
+    streetVoiceActive = null;
+    btn.classList.remove('listening');
+    if (streetTranscript.trim()) processStreetVoice(street, streetTranscript.trim());
+    streetTranscript = '';
+    return;
+  }
+  
+  // Stop any other active listening
+  if (streetVoiceActive) {
+    const oldBtn = document.getElementById(`voice-btn-${streetVoiceActive}`);
+    if (oldBtn) oldBtn.classList.remove('listening');
+    streetRecognition.stop();
+    if (streetTranscript.trim()) processStreetVoice(streetVoiceActive, streetTranscript.trim());
+    streetTranscript = '';
+  }
+  
+  streetVoiceActive = street;
+  streetTranscript = '';
+  btn.classList.add('listening');
+  
+  const transcriptEl = document.getElementById('voice-transcript-street');
+  transcriptEl.innerHTML = `<span style="color:var(--text3)">Listening for ${street === 'hole' ? 'hole cards' : street}...</span>`;
+  transcriptEl.classList.add('show');
+  
+  streetRecognition.onresult = (e) => {
+    let accumulated = '';
+    for (let i = 0; i < e.results.length; i++) accumulated += e.results[i][0].transcript;
+    streetTranscript = accumulated;
+    
+    transcriptEl.innerHTML = `<span class="raw">"${accumulated}"</span><br><span style="color:var(--text3);font-size:11px;">Listening for ${street === 'hole' ? 'hole cards' : street}... tap button again when done</span>`;
+    
+    if (streetTimeout) clearTimeout(streetTimeout);
+    streetTimeout = setTimeout(() => {
+      if (streetVoiceActive === street && streetTranscript.trim()) {
+        streetRecognition.stop();
+        streetVoiceActive = null;
+        btn.classList.remove('listening');
+        processStreetVoice(street, streetTranscript.trim());
+        streetTranscript = '';
+      }
+    }, 3000);
+  };
+  
+  streetRecognition.onerror = (e) => {
+    if (e.error === 'no-speech') { try { streetRecognition.start(); } catch(ex) {} return; }
+    btn.classList.remove('listening');
+    streetVoiceActive = null;
+    streetTranscript = '';
+    if (e.error === 'not-allowed') alert('Microphone access denied.');
+  };
+  
+  streetRecognition.onend = () => {
+    if (streetVoiceActive === street) { try { streetRecognition.start(); } catch(ex) {} return; }
+    btn.classList.remove('listening');
+  };
+  
+  try { streetRecognition.start(); } catch(ex) { streetRecognition.stop(); setTimeout(() => streetRecognition.start(), 100); }
+}
+
+function processStreetVoice(street, transcript) {
+  const transcriptEl = document.getElementById('voice-transcript-street');
+  const cards = extractCards(transcript);
+  const pot = extractPot(transcript);
+  const facing = extractPostflopFacing(transcript);
+  const betSize = extractBetSize(transcript);
+  const position = extractPosition(transcript);
+  const stackBB = extractStackBB(transcript);
+  const myAction = extractMyAction(transcript);
+  
+  const btn = document.getElementById(`voice-btn-${street}`);
+  
+  if (street === 'hole') {
+    if (cards.length >= 2) {
+      pickerState['post-hole'].cards = [formatCard(cards[0]), formatCard(cards[1])];
+      refreshAllPickers();
+      updateButtons();
+      btn.classList.add('done');
+      btn.textContent = '✓ ' + formatCard(cards[0]) + ' ' + formatCard(cards[1]);
+      document.getElementById('voice-btn-flop').disabled = false;
+      document.getElementById('voice-btn-flop').classList.add('active-street');
+      btn.classList.remove('active-street');
+      
+      if (position) document.getElementById('post-position').value = position;
+      if (stackBB) {
+        handTracker.startingStack = stackBB;
+        handTracker.currentStack = stackBB;
+        document.getElementById('post-stack').value = stackBB;
+      }
+      
+      // Track preflop action (e.g., "I call 3")
+      if (myAction) {
+        handTracker.currentStack -= myAction.cost;
+        handTracker.currentPot += myAction.potAdd;
+        updateStackDisplay();
+      }
+      
+      let summary = `✓ Hole cards: ${formatCard(cards[0])} ${formatCard(cards[1])}`;
+      if (stackBB) summary += ` | Stack: ${stackBB}BB`;
+      if (myAction) summary += ` | ${myAction.desc} → Stack: ${Math.round(handTracker.currentStack*10)/10}BB`;
+      transcriptEl.innerHTML = `<span class="raw">"${transcript}"</span><br><span class="parsed">${summary}</span>`;
+    } else {
+      transcriptEl.innerHTML = `<span class="raw">"${transcript}"</span><br><span style="color:var(--red)">✗ Couldn't parse hole cards. Try: "ace hearts king hearts"</span>`;
+    }
+  } else if (street === 'flop') {
+    if (cards.length >= 3) {
+      pickerState.board.cards[0] = formatCard(cards[0]);
+      pickerState.board.cards[1] = formatCard(cards[1]);
+      pickerState.board.cards[2] = formatCard(cards[2]);
+      refreshAllPickers();
+      updateButtons();
+      btn.classList.add('done');
+      btn.textContent = '✓ ' + [0,1,2].map(i => formatCard(cards[i])).join(' ');
+      document.getElementById('voice-btn-turn').disabled = false;
+      document.getElementById('voice-btn-turn').classList.add('active-street');
+      btn.classList.remove('active-street');
+      
+      if (pot) { handTracker.currentPot = pot; document.getElementById('post-pot').value = pot; }
+      if (facing) { document.getElementById('post-facing').value = facing; togglePostBetSize(); }
+      if (betSize) { document.getElementById('post-bet-size').value = betSize; handTracker.lastStreetBet = betSize; }
+      else { handTracker.lastStreetBet = 0; }
+      if (myAction) {
+        handTracker.currentStack -= myAction.cost;
+        handTracker.currentPot += myAction.potAdd;
+        updateStackDisplay();
+      }
+      
+      let summary = `✓ Flop: ${[0,1,2].map(i => formatCard(cards[i])).join(' ')}`;
+      if (pot) summary += ` | Pot: ${pot}BB`;
+      if (facing) summary += ` | ${facing}`;
+      if (myAction) summary += ` | ${myAction.desc} → Stack: ${Math.round(handTracker.currentStack*10)/10}BB`;
+      transcriptEl.innerHTML = `<span class="raw">"${transcript}"</span><br><span class="parsed">${summary}</span>`;
+      
+      setTimeout(() => { updateStackDisplay(); getPostflop(); }, 300);
+    } else {
+      transcriptEl.innerHTML = `<span class="raw">"${transcript}"</span><br><span style="color:var(--red)">✗ Need 3 flop cards. Try: "queen spades ten diamonds five clubs"</span>`;
+    }
+  } else if (street === 'turn') {
+    if (cards.length >= 1) {
+      // If we were facing a bet on the flop and now we're at the turn, we must have called
+      if (handTracker.lastStreetBet > 0 && !myAction) {
+        const callCost = handTracker.lastStreetBet;
+        handTracker.currentStack -= callCost;
+        handTracker.currentPot += callCost * 2; // our call + their bet
+        myAction = { type: 'auto_call', cost: callCost, potAdd: 0, desc: `Auto-called flop bet of ${callCost}BB` };
+      }
+      
+      pickerState.board.cards[3] = formatCard(cards[0]);
+      refreshAllPickers();
+      updateButtons();
+      btn.classList.add('done');
+      btn.textContent = '✓ ' + formatCard(cards[0]);
+      document.getElementById('voice-btn-river').disabled = false;
+      document.getElementById('voice-btn-river').classList.add('active-street');
+      btn.classList.remove('active-street');
+      
+      if (pot) { handTracker.currentPot = pot; document.getElementById('post-pot').value = pot; }
+      else { document.getElementById('post-pot').value = Math.round(handTracker.currentPot * 10) / 10; }
+      if (facing) { document.getElementById('post-facing').value = facing; togglePostBetSize(); }
+      if (betSize) { document.getElementById('post-bet-size').value = betSize; handTracker.lastStreetBet = betSize; }
+      else { handTracker.lastStreetBet = 0; }
+      
+      document.getElementById('post-stack').value = Math.round(handTracker.currentStack * 10) / 10;
+      
+      let summary = `✓ Turn: ${formatCard(cards[0])}`;
+      if (myAction) summary += ` | ${myAction.desc}`;
+      summary += ` | Stack: ${Math.round(handTracker.currentStack*10)/10}BB`;
+      if (pot || handTracker.currentPot) summary += ` | Pot: ${pot || Math.round(handTracker.currentPot*10)/10}BB`;
+      if (facing) summary += ` | ${facing}`;
+      transcriptEl.innerHTML = `<span class="raw">"${transcript}"</span><br><span class="parsed">${summary}</span>`;
+      
+      setTimeout(() => { updateStackDisplay(); getPostflop(); }, 300);
+    } else {
+      transcriptEl.innerHTML = `<span class="raw">"${transcript}"</span><br><span style="color:var(--red)">✗ Need the turn card. Try: "seven of hearts"</span>`;
+    }
+  } else if (street === 'river') {
+    if (cards.length >= 1) {
+      // If we were facing a bet on the turn and now we're at the river, we must have called
+      if (handTracker.lastStreetBet > 0 && !myAction) {
+        const callCost = handTracker.lastStreetBet;
+        handTracker.currentStack -= callCost;
+        handTracker.currentPot += callCost * 2;
+        myAction = { type: 'auto_call', cost: callCost, potAdd: 0, desc: `Auto-called turn bet of ${callCost}BB` };
+      }
+      
+      pickerState.board.cards[4] = formatCard(cards[0]);
+      refreshAllPickers();
+      updateButtons();
+      btn.classList.add('done');
+      btn.textContent = '✓ ' + formatCard(cards[0]);
+      btn.classList.remove('active-street');
+      
+      if (pot) { handTracker.currentPot = pot; document.getElementById('post-pot').value = pot; }
+      else { document.getElementById('post-pot').value = Math.round(handTracker.currentPot * 10) / 10; }
+      if (facing) { document.getElementById('post-facing').value = facing; togglePostBetSize(); }
+      if (betSize) { document.getElementById('post-bet-size').value = betSize; handTracker.lastStreetBet = betSize; }
+      else { handTracker.lastStreetBet = 0; }
+      
+      document.getElementById('post-stack').value = Math.round(handTracker.currentStack * 10) / 10;
+      
+      let summary = `✓ River: ${formatCard(cards[0])}`;
+      if (myAction) summary += ` | ${myAction.desc}`;
+      summary += ` | Stack: ${Math.round(handTracker.currentStack*10)/10}BB`;
+      if (pot || handTracker.currentPot) summary += ` | Pot: ${pot || Math.round(handTracker.currentPot*10)/10}BB`;
+      if (facing) summary += ` | ${facing}`;
+      transcriptEl.innerHTML = `<span class="raw">"${transcript}"</span><br><span class="parsed">${summary}</span>`;
+      
+      setTimeout(() => { updateStackDisplay(); getPostflop(); }, 300);
+    } else {
+      transcriptEl.innerHTML = `<span class="raw">"${transcript}"</span><br><span style="color:var(--red)">✗ Need the river card. Try: "two of clubs"</span>`;
+    }
+  }
+  
+  transcriptEl.classList.add('show');
+}
+
+function resetPostflopHand() {
+  // Clear all postflop cards
+  pickerState['post-hole'].cards = [null, null];
+  pickerState['post-hole'].activeSlot = 0;
+  pickerState['post-hole'].selectedRank = null;
+  pickerState.board.cards = [null, null, null, null, null];
+  pickerState.board.activeSlot = 0;
+  pickerState.board.selectedRank = null;
+  
+  refreshAllPickers();
+  updateButtons();
+  
+  // Reset form values
+  handTracker.currentStack = handTracker.startingStack;
+  handTracker.currentPot = 0;
+  handTracker.lastStreetBet = 0;
+  handTracker.lastStreetFacing = null;
+  document.getElementById('post-stack').value = handTracker.startingStack;
+  document.getElementById('post-pot').value = 10;
+  document.getElementById('post-facing').value = 'check_to_you';
+  document.getElementById('post-bet-size').value = 5;
+  togglePostBetSize();
+  
+  // Clear results
+  const resultEl = document.getElementById('postflop-result');
+  resultEl.innerHTML = '';
+  resultEl.classList.remove('show');
+  
+  // Reset street buttons
+  const streets = ['hole', 'flop', 'turn', 'river'];
+  const labels = ['🎙 Hole Cards', '🎙 Flop', '🎙 Turn', '🎙 River'];
+  streets.forEach((s, i) => {
+    const btn = document.getElementById(`voice-btn-${s}`);
+    if (btn) {
+      btn.classList.remove('done', 'listening', 'active-street');
+      btn.disabled = i > 0; // Only hole cards enabled initially
+      btn.textContent = labels[i];
+    }
+  });
+  document.getElementById('voice-btn-hole').classList.add('active-street');
+  
+  // Clear transcript
+  const transcriptEl = document.getElementById('voice-transcript-street');
+  transcriptEl.innerHTML = '';
+  transcriptEl.classList.remove('show');
+  
+  // Stop any active listening
+  if (streetVoiceActive) {
+    if (streetRecognition) streetRecognition.stop();
+    streetVoiceActive = null;
+    streetTranscript = '';
+  }
+}
+
+// ─── Natural Language Poker Parser ──────────────────────────────────────────
+
+const RANK_WORDS = {
+  'ace':'A','aces':'A','a':'A',
+  'king':'K','kings':'K','k':'K',
+  'queen':'Q','queens':'Q','q':'Q',
+  'jack':'J','jacks':'J','j':'J',
+  'ten':'T','tens':'T','10':'T','t':'T',
+  'nine':'9','nines':'9','9':'9',
+  'eight':'8','eights':'8','8':'8',
+  'seven':'7','sevens':'7','7':'7',
+  'six':'6','sixes':'6','6':'6',
+  'five':'5','fives':'5','5':'5',
+  'four':'4','fours':'4','4':'4',
+  'three':'3','threes':'3','3':'3',
+  'two':'2','twos':'2','deuce':'2','deuces':'2','2':'2',
+};
+
+const SUIT_WORDS = {
+  'spade':'s','spades':'s','of spades':'s',
+  'heart':'h','hearts':'h','of hearts':'h',
+  'diamond':'d','diamonds':'d','of diamonds':'d',
+  'club':'c','clubs':'c','of clubs':'c',
+};
+
+// ── Poker Slang ──
+const SLANG = {
+  // Board texture slang
+  'rainbow': { type: 'texture', meaning: 'three different suits' },
+  'monotone': { type: 'texture', meaning: 'three of one suit' },
+  'dry': { type: 'texture', meaning: 'disconnected, no draws' },
+  'wet': { type: 'texture', meaning: 'connected, draw-heavy' },
+  // Hand slang
+  'big slick': { type: 'hand', cards: ['As', 'Kh'] },
+  'pocket rockets': { type: 'hand', cards: ['As', 'Ah'] },
+  'rockets': { type: 'hand', cards: ['As', 'Ah'] },
+  'bullets': { type: 'hand', cards: ['As', 'Ah'] },
+  'cowboys': { type: 'hand', cards: ['Ks', 'Kh'] },
+  'ladies': { type: 'hand', cards: ['Qs', 'Qh'] },
+  'hooks': { type: 'hand', cards: ['Js', 'Jh'] },
+  'fishhooks': { type: 'hand', cards: ['Js', 'Jh'] },
+  'ducks': { type: 'hand', cards: ['2s', '2h'] },
+  'snowmen': { type: 'hand', cards: ['8s', '8h'] },
+  'sailboats': { type: 'hand', cards: ['4s', '4h'] },
+  // Action slang
+  'limp': { type: 'action', action: 'call', size: 1 },
+  'limped': { type: 'action', action: 'call', size: 1 },
+  'min raise': { type: 'action', action: 'raise' },
+  'jam': { type: 'action', action: 'all_in' },
+  'jammed': { type: 'action', action: 'all_in' },
+  'shoved': { type: 'action', action: 'all_in' },
+  'rip it': { type: 'action', action: 'all_in' },
+  'tank': { type: 'action', action: 'thinking' },
+};
+
+function extractMyAction(text) {
+  const t = text.toLowerCase();
+  
+  // "I call X" / "I called X"
+  const callMatch = t.match(/i\s+call(?:ed)?\s+(\d+\.?\d*)/);
+  if (callMatch) {
+    const cost = parseFloat(callMatch[1]);
+    return { type: 'call', cost, potAdd: cost * 2, desc: `Called ${cost}BB` };
+  }
+  
+  // "I call" (no amount — try to infer from raise size)
+  if (/i\s+call(?:ed)?(?:\s|$)/.test(t) && !/i\s+call(?:ed)?\s+\d/.test(t)) {
+    const raiseMatch = t.match(/raise(?:\s+(?:to|of))?\s*(\d+\.?\d*)/);
+    if (raiseMatch) {
+      const cost = parseFloat(raiseMatch[1]);
+      return { type: 'call', cost, potAdd: cost * 2, desc: `Called ${cost}BB` };
+    }
+  }
+  
+  // "I raise to X" / "I raised to X" / "I bet X"
+  const raiseMatch = t.match(/i\s+(?:raise[d]?\s+(?:to\s+)?|bet\s+)(\d+\.?\d*)/);
+  if (raiseMatch) {
+    const cost = parseFloat(raiseMatch[1]);
+    return { type: 'raise', cost, potAdd: cost, desc: `Raised to ${cost}BB` };
+  }
+  
+  // "I check" / "I checked"
+  if (/i\s+check(?:ed)?/.test(t)) {
+    return { type: 'check', cost: 0, potAdd: 0, desc: 'Checked' };
+  }
+  
+  // "I shove" / "I jammed" / "I go all in"
+  if (/i\s+(?:shove[d]?|jam(?:med)?|go\s+all\s*in|went\s+all\s*in)/.test(t)) {
+    const cost = handTracker.currentStack;
+    return { type: 'all_in', cost, potAdd: cost, desc: `All-in ${Math.round(cost*10)/10}BB` };
+  }
+  
+  return null;
+}
+
+const POS_WORDS = {
+  'under the gun':'UTG','utg':'UTG','under':'UTG',
+  'middle':'MP','middle position':'MP','mp':'MP',
+  'cutoff':'CO','cut off':'CO','co':'CO',
+  'button':'BTN','btn':'BTN','dealer':'BTN',
+  'small blind':'SB','small':'SB','sb':'SB',
+  'big blind':'BB','big':'BB','bb':'BB',
+};
+
+const FACING_WORDS = {
+  'unopened':'unopened','first in':'unopened','no one':'unopened','folded to':'unopened','fold to':'unopened','open':'unopened',
+  'raise':'raised','raised':'raised','facing a raise':'raised','facing raise':'raised','someone raised':'raised','villain raised':'raised',
+  '3 bet':'3bet','3bet':'3bet','three bet':'3bet','re-raise':'3bet','reraise':'3bet','facing a 3':'3bet',
+  'all in':'all_in','all-in':'all_in','shove':'all_in','jammed':'all_in','facing all in':'all_in',
+};
+
+function parseNumber(text) {
+  // Extract numbers including decimals
+  const patterns = [
+    /(\d+\.?\d*)\s*(bb|big blinds?|bigs?|b\.?b\.?)/i,
+    /(\d+\.?\d*)/
+  ];
+  for (const p of patterns) {
+    const m = text.match(p);
+    if (m) return parseFloat(m[1]);
+  }
+  return null;
+}
+
+function extractCards(text) {
+  const cards = [];
+  const t = text.toLowerCase().replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
+  
+  // ── Check for slang hand names first ──
+  for (const [slang, info] of Object.entries(SLANG)) {
+    if (info.type === 'hand' && t.includes(slang)) {
+      return [...info.cards];
+    }
+  }
+  
+  // Normalize common speech recognition quirks
+  const normalized = t
+    .replace(/\bfor\b/g, '4')      // "for" -> 4
+    .replace(/\bto\b/g, '2')       // sometimes "two" becomes "to"
+    .replace(/\btoo\b/g, '2')
+    .replace(/\bwon\b/g, '1')
+    .replace(/\bate\b/g, '8')
+    .replace(/\bah\b/g, 'ace')     // speech glitch
+    .replace(/\b10\b/g, 'ten');
+  
+  // Pattern: "pocket Xs" -> pair
+  const pocketMatch = normalized.match(/pocket\s+(\w+)/);
+  if (pocketMatch) {
+    const rank = RANK_WORDS[pocketMatch[1]];
+    if (rank) {
+      cards.push(rank + 's', rank + 'h');
+      return cards;
+    }
+  }
+
+  // Pattern: "X Y suited/offsuit"
+  const suitedMatch = normalized.match(/(\w+)\s+(\w+)\s+(suited|offsuit|off suit|of suit|sooted|sueded)/);
+  if (suitedMatch) {
+    const r1 = RANK_WORDS[suitedMatch[1]];
+    const r2 = RANK_WORDS[suitedMatch[2]];
+    if (r1 && r2) {
+      if (suitedMatch[3].startsWith('suit') || suitedMatch[3].startsWith('soot') || suitedMatch[3].startsWith('sued')) {
+        cards.push(r1 + 'h', r2 + 'h');
+      } else {
+        cards.push(r1 + 'h', r2 + 's');
+      }
+      return cards;
+    }
+  }
+
+  // Pattern: "X of SUIT" — most natural way to say it
+  const ofSuitPattern = /(\w+)\s+of\s+(spades?|hearts?|diamonds?|clubs?)/gi;
+  let match;
+  while ((match = ofSuitPattern.exec(normalized)) !== null) {
+    const rank = RANK_WORDS[match[1].toLowerCase()];
+    const suit = SUIT_WORDS[match[2].toLowerCase()];
+    if (rank && suit) cards.push(rank + suit);
+  }
+  if (cards.length >= 2) return cards;
+
+  // Pattern: "X SUIT" directly (e.g., "ace spades", "king hearts", "7 clubs")
+  const words = normalized.split(/\s+/);
+  for (let i = 0; i < words.length - 1; i++) {
+    const rank = RANK_WORDS[words[i]];
+    if (rank) {
+      // Check next word and word after for suit
+      const nextSuit = SUIT_WORDS[words[i + 1]];
+      if (nextSuit) {
+        cards.push(rank + nextSuit);
+        i++;
+        continue;
+      }
+      // "of" might be missing — check word after next
+      if (words[i + 1] === 'of' && i + 2 < words.length) {
+        const suitAfterOf = SUIT_WORDS[words[i + 2]];
+        if (suitAfterOf) {
+          cards.push(rank + suitAfterOf);
+          i += 2;
+          continue;
+        }
+      }
+    }
+  }
+  if (cards.length >= 2) return cards;
+
+  // Pattern: scan for all rank+suit combos more aggressively
+  // Handle cases like "ace hearts king spades queen diamonds 7 clubs 2 spades"
+  const allWords = normalized.split(/\s+/);
+  let pendingRank = null;
+  for (let i = 0; i < allWords.length; i++) {
+    const w = allWords[i];
+    
+    // Skip filler words
+    if (['of','the','a','an','and','is','with','on','my','i','have','got','holding','then','there','its','it'].includes(w)) continue;
+    
+    const asRank = RANK_WORDS[w];
+    const asSuit = SUIT_WORDS[w];
+    
+    if (asSuit && pendingRank) {
+      cards.push(pendingRank + asSuit);
+      pendingRank = null;
+    } else if (asRank) {
+      // If we had a pending rank with no suit, skip it (or assign default later)
+      pendingRank = asRank;
+    }
+  }
+  if (cards.length >= 2) return cards;
+
+  // Fallback: just find rank words and assign default suits
+  const foundRanks = [];
+  for (const w of allWords) {
+    const r = RANK_WORDS[w];
+    if (r && !SUIT_WORDS[w]) foundRanks.push(r);
+  }
+  if (foundRanks.length >= 2) {
+    if (t.includes('suit') || t.includes('soot') || t.includes('sued')) {
+      return foundRanks.map(r => r + 'h');
+    } else {
+      // Assign alternating suits
+      const defaultSuits = ['h','s','d','c','h'];
+      return foundRanks.map((r, i) => r + defaultSuits[i % defaultSuits.length]);
+    }
+  }
+
+  return cards;
+}
+
+function extractPosition(text) {
+  const t = text.toLowerCase();
+  for (const [phrase, pos] of Object.entries(POS_WORDS)) {
+    if (t.includes(phrase)) return pos;
+  }
+  return null;
+}
+
+function extractFacing(text) {
+  const t = text.toLowerCase();
+  // Check longer phrases first
+  const sorted = Object.entries(FACING_WORDS).sort((a, b) => b[0].length - a[0].length);
+  for (const [phrase, action] of sorted) {
+    if (t.includes(phrase)) return action;
+  }
+  return null;
+}
+
+function extractStackBB(text) {
+  const t = text.toLowerCase();
+  const patterns = [
+    /(\d+\.?\d*)\s*(bb|big blinds?|bigs?|b\.?b\.?)/i,
+    /stack(?:\s+(?:is|of|at))?\s*(\d+\.?\d*)/i,
+    /(\d+\.?\d*)\s*(?:deep|stack)/i,
+  ];
+  for (const p of patterns) {
+    const m = t.match(p);
+    if (m) {
+      const num = parseFloat(m[1] || m[2]);
+      if (num > 0 && num <= 500) return num;
+    }
+  }
+  return null;
+}
+
+function extractRaiseTo(text) {
+  const t = text.toLowerCase();
+  const patterns = [
+    /raise(?:\s+(?:to|of))?\s*(\d+\.?\d*)/i,
+    /(\d+\.?\d*)\s*(?:raise|open)/i,
+    /bet(?:\s+(?:of|is))?\s*(\d+\.?\d*)/i,
+    /to\s+(\d+\.?\d*)/i,
+  ];
+  for (const p of patterns) {
+    const m = t.match(p);
+    if (m) {
+      const num = parseFloat(m[1] || m[2]);
+      if (num > 0 && num <= 200) return num;
+    }
+  }
+  return null;
+}
+
+function extractPot(text) {
+  const t = text.toLowerCase();
+  const patterns = [
+    /pot(?:\s+(?:is|of|at))?\s*(\d+\.?\d*)/i,
+    /(\d+\.?\d*)\s*(?:in the pot|pot)/i,
+  ];
+  for (const p of patterns) {
+    const m = t.match(p);
+    if (m) return parseFloat(m[1]);
+  }
+  return null;
+}
+
+function extractBetSize(text) {
+  const t = text.toLowerCase();
+  const patterns = [
+    /bet(?:\s+(?:of|is|for))?\s*(\d+\.?\d*)/i,
+    /facing(?:\s+(?:a|the))?\s*(\d+\.?\d*)/i,
+    /(\d+\.?\d*)\s*bet/i,
+  ];
+  for (const p of patterns) {
+    const m = t.match(p);
+    if (m) return parseFloat(m[1]);
+  }
+  return null;
+}
+
+function extractPostflopFacing(text) {
+  const t = text.toLowerCase();
+  if (t.includes('facing a bet') || t.includes('facing bet') || t.includes('villain bet') || t.includes('they bet') || t.includes('he bet') || t.includes('she bet') || t.includes('bet of') || t.includes('bets')) return 'bet';
+  if (t.includes('check to me') || t.includes('checked to me') || t.includes('checked to you') || t.includes('check to you') || t.includes('checked to us') || t.includes('checks to me') || t.includes('on me')) return 'check_to_you';
+  if (t.includes('check check') || t.includes('check back') || t.includes('both check') || t.includes('checks around')) return 'check';
+  // If bet size is mentioned, assume facing a bet
+  if (/bet\s*\d/i.test(t) || /facing\s*\d/i.test(t)) return 'bet';
+  return null;
+}
+
+function parsePreflopVoice(text) {
+  const cards = extractCards(text);
+  const position = extractPosition(text);
+  const stackBB = extractStackBB(text);
+  const facing = extractFacing(text);
+  const raiseTo = extractRaiseTo(text);
+  const pot = extractPot(text);
+
+  const parts = [];
+  if (cards.length >= 2) parts.push(`Cards: ${cards[0]} ${cards[1]}`);
+  if (position) parts.push(`Position: ${position}`);
+  if (stackBB) parts.push(`Stack: ${stackBB}BB`);
+  if (facing) parts.push(`Facing: ${facing}`);
+  if (raiseTo) parts.push(`Raise: ${raiseTo}BB`);
+
+  return {
+    success: cards.length >= 2,
+    cards, position, stackBB, facing, raiseTo, pot,
+    summary: cards.length >= 2 ? '✓ Parsed: ' + parts.join(' | ') : '✗ Could not parse cards. Try: "ace king suited" or "pocket jacks"'
+  };
+}
+
+function parsePostflopVoice(text) {
+  const t = text.toLowerCase().replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
+  
+  // Try many ways to split hole cards from board cards
+  let holeText = '', boardText = '';
+  
+  // List of splitter phrases, longest first
+  const boardSplitters = [
+    'board is','the board is','board:','the board:',
+    'flop is','the flop is','flop:','the flop:',
+    'turn is','the turn is','river is','the river is',
+    'community cards','community is',
+    'board comes','flop comes','board came','flop came',
+    'board shows','flop shows',
+    'board','flop','community',
+    'on a','on the'
+  ];
+  
+  let splitFound = false;
+  for (const sp of boardSplitters) {
+    const idx = t.indexOf(sp);
+    if (idx !== -1) {
+      holeText = t.substring(0, idx);
+      boardText = t.substring(idx + sp.length);
+      splitFound = true;
+      break;
+    }
+  }
+  
+  // If no splitter found, try to parse all cards and split first 2 as hole, rest as board
+  if (!splitFound) {
+    const allCards = extractCards(t);
+    if (allCards.length >= 5) {
+      // First 2 are hole, rest are board
+      const holeCards = allCards.slice(0, 2);
+      const boardCards = allCards.slice(2);
+      const position = extractPosition(t);
+      const stackBB = extractStackBB(t);
+      const pot = extractPot(t);
+      const facing = extractPostflopFacing(t);
+      const betSize = extractBetSize(t);
+      
+      const parts = [];
+      parts.push(`Hole: ${holeCards.join(' ')}`);
+      parts.push(`Board: ${boardCards.join(' ')}`);
+      if (position) parts.push(`Pos: ${position}`);
+      if (pot) parts.push(`Pot: ${pot}BB`);
+      if (facing) parts.push(`Facing: ${facing}`);
+      if (betSize) parts.push(`Bet: ${betSize}BB`);
+      
+      return {
+        success: true,
+        holeCards, boardCards, position, stackBB, pot, facing, betSize,
+        summary: '✓ Parsed: ' + parts.join(' | ')
+      };
+    }
+    // Last resort: put everything in both and hope extractCards finds something
+    holeText = t;
+    boardText = t;
+  }
+
+  const holeCards = extractCards(holeText);
+  const boardCards = boardText ? extractCards(boardText) : [];
+  const position = extractPosition(t);
+  const stackBB = extractStackBB(t);
+  const pot = extractPot(t);
+  const facing = extractPostflopFacing(t);
+  const betSize = extractBetSize(t);
+
+  const parts = [];
+  if (holeCards.length >= 2) parts.push(`Hole: ${holeCards[0]} ${holeCards[1]}`);
+  if (boardCards.length >= 3) parts.push(`Board: ${boardCards.join(' ')}`);
+  else if (boardCards.length > 0) parts.push(`Board: ${boardCards.join(' ')} (need at least 3)`);
+  if (position) parts.push(`Pos: ${position}`);
+  if (pot) parts.push(`Pot: ${pot}BB`);
+  if (facing) parts.push(`Facing: ${facing}`);
+  if (betSize) parts.push(`Bet: ${betSize}BB`);
+
+  const success = holeCards.length >= 2 && boardCards.length >= 3;
+  return {
+    success,
+    holeCards, boardCards, position, stackBB, pot, facing, betSize,
+    summary: success 
+      ? '✓ Parsed: ' + parts.join(' | ') 
+      : '✗ ' + (holeCards.length < 2 ? 'Could not parse hole cards. ' : '') + (boardCards.length < 3 ? 'Need 3+ board cards. ' : '') + 'Try: "ace hearts king hearts, board is queen spades ten diamonds five clubs, pot 12, facing bet of 8"'
+  };
+}
+
+function formatCard(c) {
+  // Cards must be: uppercase rank + lowercase suit, e.g. "Ah", "Ks"
+  if (!c || c.length < 2) return c;
+  return c[0].toUpperCase() + c.slice(1).toLowerCase();
+}
+
+function applyPreflopVoice(parsed) {
+  // Set cards
+  if (parsed.cards.length >= 2) {
+    pickerState.preflop.cards = [formatCard(parsed.cards[0]), formatCard(parsed.cards[1])];
+    refreshAllPickers();
+    updateButtons();
+  }
+  if (parsed.position) document.getElementById('pre-position').value = parsed.position;
+  if (parsed.stackBB) document.getElementById('pre-stack').value = parsed.stackBB;
+  if (parsed.facing) {
+    document.getElementById('pre-facing').value = parsed.facing;
+    toggleVillainFields();
+  }
+  if (parsed.raiseTo) document.getElementById('pre-raise-size').value = parsed.raiseTo;
+  if (parsed.pot) document.getElementById('pre-pot').value = parsed.pot;
+
+  // Auto-submit if we have cards
+  if (parsed.cards.length >= 2) {
+    setTimeout(() => getPreflop(), 300);
+  }
+}
+
+function applyPostflopVoice(parsed) {
+  if (parsed.holeCards.length >= 2) {
+    pickerState['post-hole'].cards = [formatCard(parsed.holeCards[0]), formatCard(parsed.holeCards[1])];
+  }
+  if (parsed.boardCards.length >= 3) {
+    const bc = parsed.boardCards.map(c => formatCard(c));
+    for (let i = 0; i < 5; i++) {
+      pickerState.board.cards[i] = bc[i] || null;
+    }
+  }
+  refreshAllPickers();
+  updateButtons();
+
+  if (parsed.position) document.getElementById('post-position').value = parsed.position;
+  if (parsed.stackBB) document.getElementById('post-stack').value = parsed.stackBB;
+  if (parsed.pot) document.getElementById('post-pot').value = parsed.pot;
+  if (parsed.facing) {
+    document.getElementById('post-facing').value = parsed.facing;
+    togglePostBetSize();
+  }
+  if (parsed.betSize) document.getElementById('post-bet-size').value = parsed.betSize;
+
+  if (parsed.holeCards.length >= 2 && parsed.boardCards.length >= 3) {
+    setTimeout(() => getPostflop(), 300);
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GTO Advisor — Tournament Poker</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0d12;
+  --surface: #12161e;
+  --surface2: #1a1f2b;
+  --surface3: #222836;
+  --border: #2a3040;
+  --border-hl: #3a4560;
+  --text: #e8ecf4;
+  --text2: #8a94a8;
+  --text3: #5a6478;
+  --green: #22c55e;
+  --green-bg: #22c55e18;
+  --red: #ef4444;
+  --red-bg: #ef444418;
+  --yellow: #eab308;
+  --yellow-bg: #eab30818;
+  --blue: #3b82f6;
+  --blue-bg: #3b82f618;
+  --purple: #a855f7;
+  --spade: #e8ecf4;
+  --heart: #ef4444;
+  --diamond: #3b82f6;
+  --club: #22c55e;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Subtle background texture */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 0%, #22c55e08 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 100%, #3b82f608 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 24px 20px; }
+
+/* ── Header ── */
+.header {
+  display: flex; align-items: center; gap: 14px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 28px;
+}
+.header-icon {
+  width: 44px; height: 44px;
+  background: linear-gradient(135deg, #22c55e, #059669);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  box-shadow: 0 0 24px #22c55e30;
+}
+.header h1 { font-family: var(--mono); font-weight: 600; font-size: 20px; letter-spacing: -0.5px; }
+.header p { font-size: 13px; color: var(--text2); margin-top: 2px; }
+.header-badge {
+  margin-left: auto;
+  font-family: var(--mono); font-size: 11px;
+  padding: 4px 10px; border-radius: 6px;
+  background: var(--surface2); color: var(--text3);
+  border: 1px solid var(--border);
+}
+
+/* ── Tabs ── */
+.tabs {
+  display: flex; gap: 4px;
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 24px;
+  border: 1px solid var(--border);
+}
+.tab {
+  flex: 1; padding: 10px 16px;
+  border-radius: 8px;
+  font-family: var(--mono); font-weight: 500; font-size: 13px;
+  text-align: center; cursor: pointer;
+  color: var(--text2);
+  transition: all 0.2s;
+  border: none; background: none;
+}
+.tab:hover { color: var(--text); background: var(--surface2); }
+.tab.active { background: var(--surface3); color: var(--green); box-shadow: 0 1px 4px #0008; }
+
+/* ── Panels ── */
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* ── Form Grid ── */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group.full { grid-column: 1 / -1; }
+.form-label {
+  font-family: var(--mono); font-size: 11px; font-weight: 500;
+  color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+/* ── Inputs ── */
+input, select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--text);
+  font-family: var(--mono); font-size: 14px;
+  transition: border-color 0.2s;
+  outline: none;
+}
+input:focus, select:focus { border-color: var(--green); }
+select { cursor: pointer; }
+select option { background: var(--surface2); }
+
+/* ── Card Selector ── */
+.card-selector {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+.card-selector-title {
+  font-family: var(--mono); font-size: 12px;
+  color: var(--text3); margin-bottom: 12px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.card-display {
+  display: flex; gap: 10px; align-items: center;
+  margin-bottom: 16px; min-height: 80px;
+}
+.card-slot {
+  width: 56px; height: 78px;
+  background: var(--surface2);
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 12px;
+  color: var(--text3);
+  transition: all 0.2s;
+  position: relative;
+  cursor: pointer;
+}
+.card-slot.filled {
+  border: 2px solid var(--border-hl);
+  background: var(--surface3);
+  font-size: 20px; font-weight: 700;
+}
+.card-slot.filled.heart, .card-slot.filled.diamond { color: var(--red); }
+.card-slot.filled.spade, .card-slot.filled.club { color: var(--text); }
+.card-slot .remove {
+  position: absolute; top: -6px; right: -6px;
+  width: 18px; height: 18px;
+  background: var(--red); color: white;
+  border-radius: 50%; font-size: 11px;
+  display: none; align-items: center; justify-content: center;
+  cursor: pointer; border: 2px solid var(--bg);
+}
+.card-slot.filled:hover .remove { display: flex; }
+
+.card-separator {
+  color: var(--text3); font-family: var(--mono);
+  font-size: 12px; padding: 0 4px;
+}
+
+/* Rank + Suit picker */
+.picker-section { margin-bottom: 8px; }
+.picker-row { display: flex; gap: 4px; flex-wrap: wrap; }
+.rank-btn, .suit-btn {
+  width: 38px; height: 34px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--mono); font-weight: 600; font-size: 13px;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.rank-btn:hover, .suit-btn:hover { background: var(--surface3); color: var(--text); border-color: var(--border-hl); }
+.rank-btn.selected { background: var(--green); color: #000; border-color: var(--green); }
+.suit-btn.selected-s { background: var(--spade); color: #000; }
+.suit-btn.selected-h { background: var(--heart); color: #fff; }
+.suit-btn.selected-d { background: var(--diamond); color: #fff; }
+.suit-btn.selected-c { background: var(--club); color: #000; }
+.suit-btn.hearts { color: var(--heart); }
+.suit-btn.diamonds { color: var(--diamond); }
+.suit-btn.clubs { color: var(--club); }
+.suit-btn.spades { color: var(--spade); }
+.rank-btn.used, .suit-btn.used { opacity: 0.25; pointer-events: none; }
+
+/* ── Action Button ── */
+.action-btn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  border: none; border-radius: 10px;
+  font-family: var(--mono); font-weight: 600; font-size: 14px;
+  color: #000; cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.3px;
+  box-shadow: 0 2px 12px #22c55e40;
+}
+.action-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 20px #22c55e50; }
+.action-btn:active { transform: translateY(0); }
+.action-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* ── Result Box ── */
+.result {
+  margin-top: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  display: none;
+}
+.result.show { display: block; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.result-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px;
+}
+.result-action {
+  font-family: var(--mono); font-weight: 700; font-size: 22px;
+}
+.result-action.raise, .result-action.bet, .result-action.all-in, .result-action.call { color: var(--green); }
+.result-action.fold { color: var(--red); }
+.result-action.check { color: var(--yellow); }
+.result-action.threeBet { color: var(--purple); }
+
+.result-sizing {
+  margin-left: auto;
+  font-family: var(--mono); font-weight: 600; font-size: 16px;
+  color: var(--blue);
+  background: var(--blue-bg);
+  padding: 4px 12px; border-radius: 6px;
+}
+
+.result-body { padding: 20px; }
+.result-row {
+  display: flex; gap: 12px;
+  margin-bottom: 14px;
+  align-items: flex-start;
+}
+.result-tag {
+  font-family: var(--mono); font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  padding: 3px 8px; border-radius: 4px;
+  white-space: nowrap; min-width: 80px; text-align: center;
+}
+.tag-reason { background: var(--surface3); color: var(--text2); }
+.tag-conf { background: var(--green-bg); color: var(--green); }
+.tag-alt { background: var(--yellow-bg); color: var(--yellow); }
+.tag-hand { background: var(--blue-bg); color: var(--blue); }
+.tag-board { background: var(--purple); color: white; background: #a855f728; color: var(--purple); }
+.result-text { font-size: 14px; color: var(--text2); line-height: 1.5; }
+
+.confidence-bar {
+  height: 4px; border-radius: 2px;
+  background: var(--surface3);
+  margin-top: 16px; overflow: hidden;
+}
+.confidence-fill {
+  height: 100%; border-radius: 2px;
+  transition: width 0.5s ease;
+}
+.conf-high { background: var(--green); }
+.conf-med-high { background: #84cc16; }
+.conf-med { background: var(--yellow); }
+.conf-low { background: var(--red); }
+
+/* ── Board Cards Section ── */
+.board-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+.board-label {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--text3); text-transform: uppercase;
+  letter-spacing: 0.5px; margin-bottom: 10px;
+}
+.board-cards-display {
+  display: flex; gap: 8px; min-height: 78px;
+  align-items: center; flex-wrap: wrap;
+}
+
+/* ── Quick Ref ── */
+.quick-ref {
+  margin-top: 24px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.quick-ref-title {
+  font-family: var(--mono); font-size: 12px;
+  color: var(--text3); text-transform: uppercase;
+  margin-bottom: 12px; letter-spacing: 0.5px;
+}
+.range-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 6px;
+}
+.range-item {
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-family: var(--mono); font-size: 12px;
+  text-align: center;
+}
+.range-premium { background: #22c55e25; color: var(--green); }
+.range-strong { background: #3b82f625; color: var(--blue); }
+.range-good { background: #eab30825; color: var(--yellow); }
+.range-playable { background: #a855f725; color: var(--purple); }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .card-display { flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-icon">♠</div>
+    <div>
+      <h1>GTO Advisor</h1>
+      <p>Tournament poker decision engine</p>
+    </div>
+    <div class="header-badge">LOCAL v1.0</div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" data-tab="preflop">Preflop</button>
+    <button class="tab" data-tab="postflop">Postflop</button>
+    <button class="tab" data-tab="ranges">Ranges</button>
+  </div>
+
+  <!-- ═══════════ PREFLOP PANEL ═══════════ -->
+  <div class="panel active" id="panel-preflop">
+
+    <div class="card-selector">
+      <div class="card-selector-title">Your Hole Cards</div>
+      <div class="card-display" id="preflop-cards-display">
+        <div class="card-slot" id="preflop-slot-0" data-index="0" onclick="activateSlot('preflop', 0)">1</div>
+        <div class="card-slot" id="preflop-slot-1" data-index="1" onclick="activateSlot('preflop', 1)">2</div>
+      </div>
+      <div class="picker-section">
+        <div class="picker-row" id="preflop-rank-picker"></div>
+      </div>
+      <div class="picker-section" style="margin-top: 8px;">
+        <div class="picker-row" id="preflop-suit-picker"></div>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Your Position</label>
+        <select id="pre-position">
+          <option value="UTG">UTG (Under the Gun)</option>
+          <option value="MP">MP (Middle Position)</option>
+          <option value="CO">CO (Cutoff)</option>
+          <option value="BTN" selected>BTN (Button)</option>
+          <option value="SB">SB (Small Blind)</option>
+          <option value="BB">BB (Big Blind)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Stack (in BB)</label>
+        <input type="number" id="pre-stack" value="30" min="1" max="500" step="0.5">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Facing Action</label>
+        <select id="pre-facing" onchange="toggleVillainFields()">
+          <option value="unopened">Unopened (first in)</option>
+          <option value="raised">Facing a Raise</option>
+          <option value="3bet">Facing a 3-Bet</option>
+          <option value="all_in">Facing All-In</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Current Pot (BB)</label>
+        <input type="number" id="pre-pot" value="1.5" min="0" step="0.5">
+      </div>
+      <div class="form-group" id="villain-pos-group" style="display:none;">
+        <label class="form-label">Villain Position</label>
+        <select id="pre-villain-pos">
+          <option value="UTG">UTG</option>
+          <option value="MP">MP</option>
+          <option value="CO" selected>CO</option>
+          <option value="BTN">BTN</option>
+          <option value="SB">SB</option>
+          <option value="BB">BB</option>
+        </select>
+      </div>
+      <div class="form-group" id="raise-size-group" style="display:none;">
+        <label class="form-label">Raise Size (BB)</label>
+        <input type="number" id="pre-raise-size" value="2.5" min="0" step="0.5">
+      </div>
+    </div>
+
+    <button class="action-btn" id="preflop-btn" onclick="getPreflop()" disabled>
+      Select your cards to get advice
+    </button>
+
+    <div class="result" id="preflop-result"></div>
+  </div>
+
+  <!-- ═══════════ POSTFLOP PANEL ═══════════ -->
+  <div class="panel" id="panel-postflop">
+
+    <div class="card-selector">
+      <div class="card-selector-title">Your Hole Cards</div>
+      <div class="card-display" id="postflop-hole-display">
+        <div class="card-slot" id="post-hole-slot-0" onclick="activateSlot('post-hole', 0)">1</div>
+        <div class="card-slot" id="post-hole-slot-1" onclick="activateSlot('post-hole', 1)">2</div>
+      </div>
+      <div class="picker-section">
+        <div class="picker-row" id="post-hole-rank-picker"></div>
+      </div>
+      <div class="picker-section" style="margin-top: 8px;">
+        <div class="picker-row" id="post-hole-suit-picker"></div>
+      </div>
+    </div>
+
+    <div class="board-section">
+      <div class="board-label">Community Cards (3-5)</div>
+      <div class="board-cards-display" id="board-cards-display">
+        <div class="card-slot" id="board-slot-0" onclick="activateSlot('board', 0)">F1</div>
+        <div class="card-slot" id="board-slot-1" onclick="activateSlot('board', 1)">F2</div>
+        <div class="card-slot" id="board-slot-2" onclick="activateSlot('board', 2)">F3</div>
+        <div class="card-slot" id="board-slot-3" onclick="activateSlot('board', 3)">T</div>
+        <div class="card-slot" id="board-slot-4" onclick="activateSlot('board', 4)">R</div>
+      </div>
+      <div class="picker-section" style="margin-top: 12px;">
+        <div class="picker-row" id="board-rank-picker"></div>
+      </div>
+      <div class="picker-section" style="margin-top: 8px;">
+        <div class="picker-row" id="board-suit-picker"></div>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Your Position</label>
+        <select id="post-position">
+          <option value="UTG">UTG</option>
+          <option value="MP">MP</option>
+          <option value="CO">CO</option>
+          <option value="BTN" selected>BTN</option>
+          <option value="SB">SB</option>
+          <option value="BB">BB</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Stack (BB)</label>
+        <input type="number" id="post-stack" value="30" min="1" max="500">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Pot Size (BB)</label>
+        <input type="number" id="post-pot" value="10" min="0" step="0.5">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Street</label>
+        <select id="post-street">
+          <option value="flop" selected>Flop</option>
+          <option value="turn">Turn</option>
+          <option value="river">River</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Facing Action</label>
+        <select id="post-facing" onchange="togglePostBetSize()">
+          <option value="check_to_you">Checked to you</option>
+          <option value="bet">Facing a Bet</option>
+          <option value="check">Check-check (your turn)</option>
+        </select>
+      </div>
+      <div class="form-group" id="post-bet-group" style="display:none;">
+        <label class="form-label">Bet Size (BB)</label>
+        <input type="number" id="post-bet-size" value="5" min="0" step="0.5">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Were you the preflop aggressor?</label>
+        <select id="post-aggressor">
+          <option value="yes" selected>Yes (I raised pre)</option>
+          <option value="no">No (I called/checked)</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="action-btn" id="postflop-btn" onclick="getPostflop()" disabled>
+      Select your cards and board to get advice
+    </button>
+
+    <div class="result" id="postflop-result"></div>
+  </div>
+
+  <!-- ═══════════ RANGES PANEL ═══════════ -->
+  <div class="panel" id="panel-ranges">
+    <div class="form-grid" style="margin-bottom: 20px;">
+      <div class="form-group">
+        <label class="form-label">Position</label>
+        <select id="range-position" onchange="showRanges()">
+          <option value="UTG">UTG</option>
+          <option value="MP">MP</option>
+          <option value="CO">CO</option>
+          <option value="BTN" selected>BTN</option>
+          <option value="SB">SB</option>
+          <option value="BB">BB</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Stack Depth (BB)</label>
+        <select id="range-stack" onchange="showRanges()">
+          <option value="5">5 BB (Push/Fold)</option>
+          <option value="10">10 BB (Short)</option>
+          <option value="15">15 BB</option>
+          <option value="25">25 BB</option>
+          <option value="40" selected>40 BB (Standard)</option>
+        </select>
+      </div>
+    </div>
+    <div id="range-display"></div>
+  </div>
+
+</div>
+
+<script>
+// ─── State ──────────────────────────────────────────────────────────────────
+const RANKS = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
+const SUITS = [
+  { char: 's', symbol: '♠', name: 'spades', color: 'spade' },
+  { char: 'h', symbol: '♥', name: 'hearts', color: 'heart' },
+  { char: 'd', symbol: '♦', name: 'diamonds', color: 'diamond' },
+  { char: 'c', symbol: '♣', name: 'clubs', color: 'club' },
+];
+
+// Track state for each picker group
+const pickerState = {
+  'preflop': { cards: [null, null], activeSlot: 0, selectedRank: null },
+  'post-hole': { cards: [null, null], activeSlot: 0, selectedRank: null },
+  'board': { cards: [null, null, null, null, null], activeSlot: 0, selectedRank: null },
+};
+
+// All used cards (to prevent duplicates)
+function getAllUsedCards() {
+  const used = new Set();
+  for (const group of Object.values(pickerState)) {
+    for (const c of group.cards) {
+      if (c) used.add(c);
+    }
+  }
+  return used;
+}
+
+// ─── Picker Init ────────────────────────────────────────────────────────────
+function initPicker(group) {
+  const rankRow = document.getElementById(`${group}-rank-picker`);
+  const suitRow = document.getElementById(`${group}-suit-picker`);
+  if (!rankRow || !suitRow) return;
+
+  rankRow.innerHTML = '';
+  RANKS.forEach(r => {
+    const btn = document.createElement('button');
+    btn.className = 'rank-btn';
+    btn.textContent = r;
+    btn.dataset.rank = r;
+    btn.onclick = () => selectRank(group, r);
+    rankRow.appendChild(btn);
+  });
+
+  suitRow.innerHTML = '';
+  SUITS.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = `suit-btn ${s.name}`;
+    btn.innerHTML = s.symbol;
+    btn.dataset.suit = s.char;
+    btn.onclick = () => selectSuit(group, s.char);
+    suitRow.appendChild(btn);
+  });
+}
+
+function selectRank(group, rank) {
+  const state = pickerState[group];
+  state.selectedRank = rank;
+  refreshPicker(group);
+}
+
+function selectSuit(group, suit) {
+  const state = pickerState[group];
+  if (!state.selectedRank) return;
+
+  const card = state.selectedRank + suit;
+  if (getAllUsedCards().has(card)) return;
+
+  state.cards[state.activeSlot] = card;
+  state.selectedRank = null;
+
+  // Advance to next empty slot
+  const nextEmpty = state.cards.findIndex((c, i) => c === null && i > state.activeSlot);
+  if (nextEmpty !== -1) state.activeSlot = nextEmpty;
+
+  refreshPicker(group);
+  refreshAllPickers();
+  updateButtons();
+}
+
+function activateSlot(group, index) {
+  const state = pickerState[group];
+  if (state.cards[index]) {
+    // Remove card
+    state.cards[index] = null;
+    state.activeSlot = index;
+    state.selectedRank = null;
+    refreshAllPickers();
+    updateButtons();
+    return;
+  }
+  state.activeSlot = index;
+  state.selectedRank = null;
+  refreshPicker(group);
+}
+
+function refreshPicker(group) {
+  const state = pickerState[group];
+  const used = getAllUsedCards();
+
+  // Update slots
+  state.cards.forEach((card, i) => {
+    let slotId;
+    if (group === 'preflop') slotId = `preflop-slot-${i}`;
+    else if (group === 'post-hole') slotId = `post-hole-slot-${i}`;
+    else slotId = `board-slot-${i}`;
+    
+    const slot = document.getElementById(slotId);
+    if (!slot) return;
+
+    if (card) {
+      const suitObj = SUITS.find(s => s.char === card[1]);
+      slot.className = `card-slot filled ${suitObj.name === 'hearts' || suitObj.name === 'diamonds' ? 'heart' : 'spade'}`;
+      slot.innerHTML = `${card[0]}${suitObj.symbol}<span class="remove" onclick="event.stopPropagation(); removeCard('${group}', ${i})">×</span>`;
+    } else {
+      slot.className = 'card-slot';
+      const labels = group === 'board' ? ['F1','F2','F3','T','R'] : ['1','2'];
+      slot.textContent = labels[i] || (i + 1);
+    }
+
+    if (i === state.activeSlot && !card) {
+      slot.style.borderColor = 'var(--green)';
+      slot.style.borderStyle = 'solid';
+    } else {
+      slot.style.borderColor = '';
+      slot.style.borderStyle = card ? 'solid' : 'dashed';
+    }
+  });
+
+  // Update rank buttons
+  const rankBtns = document.querySelectorAll(`#${group}-rank-picker .rank-btn`);
+  rankBtns.forEach(btn => {
+    btn.classList.toggle('selected', btn.dataset.rank === state.selectedRank);
+  });
+
+  // Update suit buttons
+  const suitBtns = document.querySelectorAll(`#${group}-suit-picker .suit-btn`);
+  suitBtns.forEach(btn => {
+    const s = btn.dataset.suit;
+    btn.classList.remove('selected-s','selected-h','selected-d','selected-c','used');
+    if (state.selectedRank) {
+      const testCard = state.selectedRank + s;
+      if (used.has(testCard)) {
+        btn.classList.add('used');
+      }
+    }
+  });
+}
+
+function refreshAllPickers() {
+  for (const group of Object.keys(pickerState)) {
+    refreshPicker(group);
+  }
+}
+
+function removeCard(group, index) {
+  pickerState[group].cards[index] = null;
+  pickerState[group].activeSlot = index;
+  pickerState[group].selectedRank = null;
+  refreshAllPickers();
+  updateButtons();
+}
+
+function updateButtons() {
+  const preCards = pickerState['preflop'].cards.filter(Boolean);
+  const preBtn = document.getElementById('preflop-btn');
+  if (preCards.length === 2) {
+    preBtn.disabled = false;
+    preBtn.textContent = 'GET GTO ADVICE →';
+  } else {
+    preBtn.disabled = true;
+    preBtn.textContent = 'Select your cards to get advice';
+  }
+
+  const postHole = pickerState['post-hole'].cards.filter(Boolean);
+  const boardCards = pickerState['board'].cards.filter(Boolean);
+  const postBtn = document.getElementById('postflop-btn');
+  if (postHole.length === 2 && boardCards.length >= 3) {
+    postBtn.disabled = false;
+    postBtn.textContent = 'GET GTO ADVICE →';
+  } else {
+    postBtn.disabled = true;
+    postBtn.textContent = 'Select your cards and board to get advice';
+  }
+}
+
+// ─── Tabs ───────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(`panel-${tab.dataset.tab}`).classList.add('active');
+    if (tab.dataset.tab === 'ranges') showRanges();
+  });
+});
+
+// ─── Toggle Fields ──────────────────────────────────────────────────────────
+function toggleVillainFields() {
+  const facing = document.getElementById('pre-facing').value;
+  const show = facing !== 'unopened';
+  document.getElementById('villain-pos-group').style.display = show ? '' : 'none';
+  document.getElementById('raise-size-group').style.display = show ? '' : 'none';
+}
+
+function togglePostBetSize() {
+  const facing = document.getElementById('post-facing').value;
+  document.getElementById('post-bet-group').style.display = facing === 'bet' ? '' : 'none';
+}
+
+// ─── API Calls ──────────────────────────────────────────────────────────────
+async function getPreflop() {
+  const cards = pickerState['preflop'].cards;
+  const data = {
+    card1: cards[0],
+    card2: cards[1],
+    position: document.getElementById('pre-position').value,
+    stack_bb: document.getElementById('pre-stack').value,
+    facing_action: document.getElementById('pre-facing').value,
+    villain_position: document.getElementById('pre-villain-pos').value,
+    pot_bb: document.getElementById('pre-pot').value,
+    raise_size_bb: document.getElementById('pre-raise-size').value,
+  };
+
+  try {
+    const resp = await fetch('/api/preflop', {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+    });
+    const result = await resp.json();
+    displayPreflopResult(result);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function getPostflop() {
+  const hole = pickerState['post-hole'].cards.filter(Boolean);
+  const board = pickerState['board'].cards.filter(Boolean);
+  
+  // Auto-detect street
+  let street = 'flop';
+  if (board.length === 4) street = 'turn';
+  if (board.length === 5) street = 'river';
+  document.getElementById('post-street').value = street;
+
+  const data = {
+    hole_cards: hole,
+    board_cards: board,
+    position: document.getElementById('post-position').value,
+    stack_bb: document.getElementById('post-stack').value,
+    pot_bb: document.getElementById('post-pot').value,
+    facing_action: document.getElementById('post-facing').value,
+    bet_size_bb: document.getElementById('post-bet-size').value,
+    street: street,
+    is_aggressor: document.getElementById('post-aggressor').value === 'yes',
+  };
+
+  try {
+    const resp = await fetch('/api/postflop', {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+    });
+    const result = await resp.json();
+    displayPostflopResult(result);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+// ─── Display Results ────────────────────────────────────────────────────────
+function getActionClass(action) {
+  const a = action.toLowerCase();
+  if (a.includes('all-in') || a.includes('all_in')) return 'all-in';
+  if (a.includes('raise') || a.includes('bet') || a.includes('3-bet') || a.includes('4-bet')) return 'raise';
+  if (a.includes('call')) return 'call';
+  if (a.includes('fold')) return 'fold';
+  if (a.includes('check')) return 'check';
+  return '';
+}
+
+function getConfWidth(conf) {
+  const c = conf.toUpperCase();
+  if (c === 'HIGH') return { width: '95%', cls: 'conf-high' };
+  if (c === 'MEDIUM-HIGH') return { width: '78%', cls: 'conf-med-high' };
+  if (c === 'MEDIUM') return { width: '60%', cls: 'conf-med' };
+  return { width: '40%', cls: 'conf-low' };
+}
+
+function displayPreflopResult(r) {
+  const el = document.getElementById('preflop-result');
+  const conf = getConfWidth(r.confidence || 'MEDIUM');
+  
+  el.innerHTML = `
+    <div class="result-header">
+      <span class="result-action ${getActionClass(r.action)}">${r.action}</span>
+      ${r.sizing && r.sizing !== '—' ? `<span class="result-sizing">${r.sizing}</span>` : ''}
+    </div>
+    <div class="result-body">
+      <div class="result-row">
+        <span class="result-tag tag-hand">HAND</span>
+        <span class="result-text">${r.hand} (${r.category}) — ${r.stack_depth}</span>
+      </div>
+      <div class="result-row">
+        <span class="result-tag tag-reason">REASONING</span>
+        <span class="result-text">${r.reasoning}</span>
+      </div>
+      ${r.alternative ? `
+      <div class="result-row">
+        <span class="result-tag tag-alt">ALSO</span>
+        <span class="result-text">${r.alternative}</span>
+      </div>` : ''}
+      <div class="result-row">
+        <span class="result-tag tag-conf">CONFIDENCE</span>
+        <span class="result-text">${r.confidence}</span>
+      </div>
+      <div class="confidence-bar">
+        <div class="confidence-fill ${conf.cls}" style="width: ${conf.width}"></div>
+      </div>
+    </div>
+  `;
+  el.classList.add('show');
+}
+
+function displayPostflopResult(r) {
+  const el = document.getElementById('postflop-result');
+  const conf = getConfWidth(r.confidence || 'MEDIUM');
+  const hand = r.hand_eval || {};
+  
+  el.innerHTML = `
+    <div class="result-header">
+      <span class="result-action ${getActionClass(r.action)}">${r.action}</span>
+      ${r.sizing && r.sizing !== '—' ? `<span class="result-sizing">${r.sizing}</span>` : ''}
+    </div>
+    <div class="result-body">
+      <div class="result-row">
+        <span class="result-tag tag-hand">HAND</span>
+        <span class="result-text">${(hand.made_hand || '').replace(/_/g, ' ')} (${hand.strength || ''})${hand.draws && hand.draws.length ? ' + ' + hand.draws.map(d => d.replace(/_/g, ' ')).join(', ') : ''}</span>
+      </div>
+      <div class="result-row">
+        <span class="result-tag tag-board">BOARD</span>
+        <span class="result-text">${(r.board_texture || '').replace(/_/g, ' ')} — ${r.texture_description || ''}</span>
+      </div>
+      <div class="result-row">
+        <span class="result-tag tag-reason">REASONING</span>
+        <span class="result-text">${r.reasoning}</span>
+      </div>
+      ${r.alternative ? `
+      <div class="result-row">
+        <span class="result-tag tag-alt">ALSO</span>
+        <span class="result-text">${r.alternative}</span>
+      </div>` : ''}
+      <div class="result-row">
+        <span class="result-tag tag-conf">CONFIDENCE</span>
+        <span class="result-text">${r.confidence}</span>
+      </div>
+      <div class="confidence-bar">
+        <div class="confidence-fill ${conf.cls}" style="width: ${conf.width}"></div>
+      </div>
+    </div>
+  `;
+  el.classList.add('show');
+}
+
+// ─── Ranges Display ─────────────────────────────────────────────────────────
+const RANGE_DATA = {
+  premium: ['AA','KK','QQ','AKs','AKo'],
+  strong: ['JJ','TT','AQs','AQo','AJs','KQs'],
+  good: ['99','88','ATs','AJo','KJs','KQo','QJs'],
+  playable: ['77','66','55','A9s-A2s','KTs','K9s','QTs','Q9s','JTs','J9s','T9s','98s','87s','76s','65s','54s','ATo','KJo','QJo','JTo'],
+};
+
+const POS_RANGES = {
+  UTG: ['premium','strong'],
+  MP: ['premium','strong','good'],
+  CO: ['premium','strong','good','playable'],
+  BTN: ['premium','strong','good','playable'],
+  SB: ['premium','strong','good','playable'],
+  BB: ['premium','strong','good','playable'],
+};
+
+function showRanges() {
+  const pos = document.getElementById('range-position').value;
+  const stack = parseInt(document.getElementById('range-stack').value);
+  const container = document.getElementById('range-display');
+  
+  let ranges = POS_RANGES[pos] || [];
+  let html = `<div class="quick-ref"><div class="quick-ref-title">${pos} Open Range — ${stack} BB</div>`;
+  
+  if (stack <= 10) {
+    html += `<p style="color:var(--text2);font-size:14px;margin-bottom:14px;">At ${stack} BB, use push/fold charts. All opens should be all-in.</p>`;
+  }
+  
+  for (const tier of ranges) {
+    const cls = `range-${tier}`;
+    html += `<div style="margin-bottom:12px;"><div class="form-label" style="margin-bottom:6px;">${tier.toUpperCase()}</div><div class="range-grid">`;
+    for (const hand of RANGE_DATA[tier] || []) {
+      html += `<div class="range-item ${cls}">${hand}</div>`;
+    }
+    html += '</div></div>';
+  }
+  
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+// ─── Init ───────────────────────────────────────────────────────────────────
+initPicker('preflop');
+initPicker('post-hole');
+initPicker('board');
+refreshAllPickers();
+showRanges();
+</script>
+</body>
+</html>
